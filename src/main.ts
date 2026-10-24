@@ -2,6 +2,7 @@ import './styles.css';
 import { sfx, isMuted, setMuted } from './audio';
 import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
+import { applyStatic, detectLang, locale, setLang, t, type Lang } from './i18n';
 import { clock, diff, health, winner, type Attack } from './game';
 import qrcode from 'qrcode-generator';
 import { PIX_KEY, pixPayload } from './pix';
@@ -17,15 +18,31 @@ const ele = params.get('ele') ?? ELEICAO_2T;
 
 const arena = $('#arena');
 
+const storage = {
+  get: (k: string) => {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      // sem storage: vale só para esta visita
+    }
+  },
+};
+
+setLang(detectLang(params.get('lang'), storage.get('lang'), navigator.languages ?? [navigator.language]));
+applyStatic();
+
 // Estilo visual: cartoon (padrão) ou realista. ?style= tem prioridade e fica salvo.
 const readStyle = (): Style => {
   const p = params.get('style');
   if (p === 'real' || p === 'cartoon') return p;
-  try {
-    return localStorage.getItem('style') === 'real' ? 'real' : 'cartoon';
-  } catch {
-    return 'cartoon';
-  }
+  return storage.get('style') === 'real' ? 'real' : 'cartoon';
 };
 let style = readStyle();
 arena.classList.toggle('realistic', style === 'real');
@@ -37,12 +54,14 @@ document.documentElement.classList.toggle('overlay', overlay);
 const stage = $('#stage');
 const fx = new Fx(arena, $('#announcer'));
 
-const fmtInt = (n: number) => n.toLocaleString('pt-BR');
-const fmtPct = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtInt = (n: number) => n.toLocaleString(locale());
+const fmtPct = (n: number) => n.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 let fighters: [Fighter, Fighter] | null = null;
 let prev: Snapshot | null = null;
 let finished = false;
+let lastStatus: Status | null = null;
+let waitingBanner = false; // único banner fixo traduzível (o de vitória é sempre "WINS")
 const queue: Snapshot[] = [];
 let busy = false;
 
@@ -57,22 +76,25 @@ function renderHud(s: Snapshot) {
     $(`#bar-${i} .trail`).style.width = `${hp}%`;
     $(`#bar-${i}`).classList.toggle('over50', s.validVotes > 0 && c.pct > 50);
     $(`#stats-${i}`).innerHTML =
-      s.validVotes > 0 ? `<b>${fmtPct(c.pct)}%</b> ${fmtInt(c.votes)} votos` : `<b>—</b> aguardando votos`;
+      s.validVotes > 0
+        ? `<b>${fmtPct(c.pct)}%</b> ${t('votes', { n: fmtInt(c.votes) })}`
+        : `<b>—</b> ${t('awaitingVotes')}`;
   });
-  const t = clock(s.pctSections);
-  $('#clock').textContent = String(t).padStart(2, '0');
-  $('#clock').classList.toggle('low', t <= 10);
-  $('#apuradas').textContent = `${fmtPct(s.pctSections)}% das seções`;
+  const secs = clock(s.pctSections);
+  $('#clock').textContent = String(secs).padStart(2, '0');
+  $('#clock').classList.toggle('low', secs <= 10);
+  $('#apuradas').textContent = t('sections', { p: fmtPct(s.pctSections) });
   $('#updated').textContent = s.time ? `TSE ${s.date} ${s.time}` : '';
 }
 
 function setStatus(st: Status) {
+  lastStatus = st;
   const el = $('#status-text');
   if (st.kind === 'ok') {
-    el.textContent = `● AO VIVO · consultado ${st.at.toLocaleTimeString('pt-BR')}`;
+    el.textContent = t('live', { t: st.at.toLocaleTimeString(locale()) });
     el.className = 'live';
   } else {
-    el.textContent = `● SINAL PERDIDO (${st.message}) · nova tentativa em ${Math.round(st.retryIn / 1000)}s`;
+    el.textContent = t('lost', { m: st.message, s: Math.round(st.retryIn / 1000) });
     el.className = 'error';
   }
 }
@@ -109,7 +131,7 @@ async function playAttack(ev: Attack, next: Snapshot) {
   if (ev.firstBlood) void fx.announce('FIRST BLOOD', 1300, 'red');
   if (ev.reversal) {
     sfx.say('Combo breaker');
-    void fx.announce('VIRADA!', 1500, 'gold');
+    void fx.announce(t('reversal'), 1500, 'gold');
   }
 
   sfx.whoosh();
@@ -131,7 +153,7 @@ async function playAttack(ev: Attack, next: Snapshot) {
   renderHud(next);
   if (ev.delta >= 0.005) {
     const p = A.headPoint(arena);
-    fx.popup({ x: p.x, y: p.y - 90 }, `+${fmtPct(ev.delta)} p.p.`, 'gain');
+    fx.popup({ x: p.x, y: p.y - 90 }, t('gain', { d: fmtPct(ev.delta) }), 'gain');
   }
   const hitWord = ['HIT', 'HIT!', 'BRUTAL!', 'OUTSTANDING!'][strength];
   const dp = D.headPoint(arena);
@@ -179,7 +201,8 @@ async function handle(s: Snapshot) {
     prev = s;
     const w = winner(s);
     if (s.validVotes <= 0) {
-      fx.banner('AGUARDANDO APURAÇÃO · 17h', 'small');
+      fx.banner(t('waiting'), 'small');
+      waitingBanner = true;
     } else {
       sfx.say('Round two. Fight!');
       await fx.announce('ROUND 2', 1200);
@@ -197,6 +220,7 @@ async function handle(s: Snapshot) {
   if (ev) {
     if (prev!.validVotes <= 0) {
       fx.clearBanner();
+      waitingBanner = false;
       sfx.say('Round two. Fight!');
       await fx.announce('ROUND 2', 1100);
       await fx.announce('FIGHT!', 900, 'red');
@@ -235,7 +259,7 @@ function onSnapshot(s: Snapshot) {
 // ---------- Controles ----------
 
 const muteBtn = $<HTMLButtonElement>('#mute');
-const renderMute = () => (muteBtn.textContent = isMuted() ? '🔇 SOM OFF' : '🔊 SOM ON');
+const renderMute = () => (muteBtn.textContent = isMuted() ? t('soundOff') : t('soundOn'));
 muteBtn.addEventListener('click', () => {
   setMuted(!isMuted());
   renderMute();
@@ -243,20 +267,58 @@ muteBtn.addEventListener('click', () => {
 renderMute();
 
 const styleBtn = $<HTMLButtonElement>('#style');
-const renderStyleBtn = () => (styleBtn.textContent = style === 'real' ? '🎨 CARTOON' : '📸 REALISTA');
+const renderStyleBtn = () => (styleBtn.textContent = style === 'real' ? t('styleToCartoon') : t('styleToReal'));
 styleBtn.addEventListener('click', () => {
   style = style === 'real' ? 'cartoon' : 'real';
-  try {
-    localStorage.setItem('style', style);
-  } catch {
-    // sem storage: vale só para esta visita
-  }
+  storage.set('style', style);
   arena.classList.toggle('realistic', style === 'real');
   fighters?.forEach((f) => f.setStyle(style));
   updateReach();
   renderStyleBtn();
+
+// Troca de idioma ao vivo, sem recarregar (a luta continua de onde está).
+const langSelect = $<HTMLSelectElement>('#lang');
+function renderLangDependent() {
+  applyStatic();
+  renderMute();
+  renderStyleBtn();
+  renderSimMark();
+  if (prev) renderHud(prev);
+  if (lastStatus) setStatus(lastStatus);
+  else if (simMode) $('#status-text').textContent = t('simStatus');
+  if (waitingBanner) fx.banner(t('waiting'), 'small');
+  if (overlay) renderCredit();
+}
+langSelect.value = document.documentElement.lang.split('-')[0];
+langSelect.addEventListener('change', () => {
+  const lang = langSelect.value as Lang;
+  setLang(lang);
+  storage.set('lang', lang);
+  renderLangDependent();
+});
 });
 renderStyleBtn();
+
+// Troca de idioma ao vivo, sem recarregar (a luta continua de onde está).
+const langSelect = $<HTMLSelectElement>('#lang');
+function renderLangDependent() {
+  applyStatic();
+  renderMute();
+  renderStyleBtn();
+  renderSimMark();
+  if (prev) renderHud(prev);
+  if (lastStatus) setStatus(lastStatus);
+  else if (simMode) $('#status-text').textContent = t('simStatus');
+  if (waitingBanner) fx.banner(t('waiting'), 'small');
+  if (overlay) renderCredit();
+}
+langSelect.value = document.documentElement.lang.split('-')[0];
+langSelect.addEventListener('change', () => {
+  const lang = langSelect.value as Lang;
+  setLang(lang);
+  storage.set('lang', lang);
+  renderLangDependent();
+});
 
 // ---------- Pix ----------
 
@@ -287,19 +349,31 @@ const copyBtn = $<HTMLButtonElement>('#pix-copy');
 copyBtn.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(pixCode);
-    copyBtn.textContent = 'COPIADO! ✓';
+    copyBtn.textContent = t('pixCopied');
   } catch {
-    copyBtn.textContent = 'NÃO DEU — COPIE A CHAVE ABAIXO';
+    copyBtn.textContent = t('pixCopyFail');
   }
-  setTimeout(() => (copyBtn.textContent = 'COPIAR CÓDIGO PIX'), 2500);
+  setTimeout(() => (copyBtn.textContent = t('pixCopy')), 2500);
 });
 
 // ---------- Overlay ----------
 
-if (overlay) {
+// ---------- Tarja da simulação (texto traduzido, então gerada aqui e não no CSS) ----------
+
+function renderSimMark() {
+  const text = t('simMark').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='460' height='220'><text x='230' y='120' text-anchor='middle' transform='rotate(-24 230 110)' font-family='monospace' font-weight='bold' font-size='22' fill='#ff3b30' fill-opacity='0.32'>${text}</text></svg>`;
+  $('#sim-mark').style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function renderCredit() {
   const credit = $<HTMLAnchorElement>('#credit');
   credit.href = location.origin + location.pathname;
-  credit.textContent = `${(location.host + location.pathname).replace(/\/$/, '')} · dados TSE · apartidário`;
+  credit.textContent = `${(location.host + location.pathname).replace(/\/$/, '')} · ${t('credit')}`;
+}
+
+if (overlay) {
+  renderCredit();
   if (params.get('sound') === '1') {
     setMuted(false);
     renderMute();
@@ -320,7 +394,7 @@ function renderOgScene() {
   createFighters(s);
   renderHud(s);
   $('#stats-0').textContent = $('#stats-1').textContent = '';
-  $('#announcer').innerHTML = 'APURAÇÃO<br>KOMBAT<small>2º TURNO · 25/10 · AO VIVO DO TSE</small>';
+  $('#announcer').innerHTML = `APURAÇÃO<br>KOMBAT<small>${t('ogSubtitle')}</small>`;
   $('#announcer').className = 'sticky';
 }
 
@@ -329,7 +403,8 @@ if (params.has('og')) {
 } else if (simMode) {
   // Tarja impossível de recortar: um print da simulação não pode passar por resultado real.
   $('#sim-mark').hidden = false;
-  $('#status-text').textContent = '● SIMULAÇÃO (dados fictícios)';
+  renderSimMark();
+  $('#status-text').textContent = t('simStatus');
   $('#status-text').className = 'sim';
   startSim(onSnapshot, Number(params.get('speed')) || 3000);
 } else {

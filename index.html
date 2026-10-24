@@ -65,29 +65,34 @@
 
       <div id="stage"></div>
       <div id="announcer"></div>
-      <button id="win-cta" type="button" hidden>☕ CURTIU? APOIE O PROJETO VIA PIX</button>
+      <button id="win-cta" type="button" hidden data-i18n="winCta">☕ CURTIU? APOIE O PROJETO VIA PIX</button>
       <a id="credit" target="_blank" rel="noopener"></a>
-      <div id="sim-mark" hidden aria-hidden="true"><span>SIMULAÇÃO · DADOS FICTÍCIOS</span></div>
+      <div id="sim-mark" hidden aria-hidden="true"><span data-i18n="simMark">SIMULAÇÃO · DADOS FICTÍCIOS</span></div>
 
       <footer id="status">
-        <span id="status-text">● conectando ao TSE…</span>
+        <span id="status-text" data-i18n="connecting">● conectando ao TSE…</span>
         <span id="updated"></span>
-        <span class="disclaimer">Dados oficiais do TSE · animação ilustrativa · sem vínculo com candidatos</span>
-        <button id="pix" type="button" title="Apoie o projeto via Pix (não é doação de campanha)">☕ PIX</button>
-        <button id="style" type="button" title="Trocar estilo visual"></button>
+        <span class="disclaimer" data-i18n="disclaimer">Dados oficiais do TSE · animação ilustrativa · sem vínculo com candidatos</span>
+        <button id="pix" type="button" data-i18n-title="pixButtonTitle">☕ PIX</button>
+        <button id="style" type="button" data-i18n-title="styleTitle"></button>
         <button id="mute" type="button"></button>
+        <select id="lang" data-i18n-aria="langLabel" data-i18n-title="langLabel">
+          <option value="pt">🌐 PT</option>
+          <option value="en">🌐 EN</option>
+          <option value="es">🌐 ES</option>
+        </select>
       </footer>
     </main>
 
     <dialog id="pix-dialog" aria-labelledby="pix-title">
-      <h2 id="pix-title">APOIE O PROJETO</h2>
-      <p>Pague um café pro site. Qualquer valor ajuda a manter a arena de pé.</p>
-      <p class="pix-disclaimer">Doação ao site, <strong>não</strong> a candidatos ou partidos.<br />Projeto independente e apartidário.</p>
+      <h2 id="pix-title" data-i18n="pixHeading">APOIE O PROJETO</h2>
+      <p data-i18n="pixLead">Pague um café pro site. Qualquer valor ajuda a manter a arena de pé.</p>
+      <p class="pix-disclaimer" data-i18n-html="pixDisclaimer">Doação ao site, <strong>não</strong> a candidatos ou partidos.<br />Projeto independente e apartidário.</p>
       <div id="pix-qr" role="img" aria-label="QR Code Pix"></div>
-      <p class="pix-hint">Abra o app do banco, escolha Pix › Ler QR Code<br />ou use o Pix Copia e Cola:</p>
-      <button id="pix-copy" type="button">COPIAR CÓDIGO PIX</button>
-      <p class="pix-key">Chave aleatória:<br /><code id="pix-key"></code></p>
-      <button id="pix-close" type="button" aria-label="Fechar">×</button>
+      <p class="pix-hint" data-i18n-html="pixHint">Abra o app do banco, escolha Pix › Ler QR Code<br />ou use o Pix Copia e Cola:</p>
+      <button id="pix-copy" type="button" data-i18n="pixCopy">COPIAR CÓDIGO PIX</button>
+      <p class="pix-key"><span data-i18n="pixKey">Chave aleatória:</span><br /><code id="pix-key"></code></p>
+      <button id="pix-close" type="button" data-i18n-aria="close">×</button>
     </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
