@@ -554,3 +554,21 @@ html, body {
 }
 
 .fighter.right .emblem { transform: scaleX(-1); transform-box: fill-box; transform-origin: center; }
+
+/* ---------- cena estática da imagem de compartilhamento (?og) ---------- */
+
+#arena.og #status { display: none; }
+#arena.og .rig { animation: none; }
+#arena.og #stage { bottom: 6%; }
+#arena.og .fighter.left { left: 7%; }
+#arena.og .fighter.right { right: 7%; }
+#arena.og #announcer { top: 50%; font-size: 76px; }
+#arena.og #announcer small {
+  display: block;
+  margin-top: 22px;
+  font-size: 20px;
+  -webkit-text-stroke: 0;
+  color: var(--text);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+#arena.og #apuradas { visibility: hidden; }

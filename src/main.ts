@@ -221,7 +221,27 @@ muteBtn.addEventListener('click', () => {
 });
 renderMute();
 
-if (simMode) {
+// ?og: cena estática usada para gerar public/og.png (npm run og)
+function renderOgScene() {
+  arena.classList.add('og');
+  const cand = (number: string, name: string, sq: string, seq: number) => ({
+    number, name, sq, seq, votes: 0, pct: 0, elected: false, status: '',
+  });
+  const s: Snapshot = {
+    key: 'og', date: '', time: '', pctSections: 0, electorate: 0, remainingVoters: 0,
+    validVotes: 0, final: false,
+    candidates: [cand('13', 'LULA', '280002542548', 1), cand('22', 'FLAVIO BOLSONARO', '280002551544', 2)],
+  };
+  createFighters(s);
+  renderHud(s);
+  $('#stats-0').textContent = $('#stats-1').textContent = '';
+  $('#announcer').innerHTML = 'APURAÇÃO<br>KOMBAT<small>2º TURNO · 25/10 · AO VIVO DO TSE</small>';
+  $('#announcer').className = 'sticky';
+}
+
+if (params.has('og')) {
+  renderOgScene();
+} else if (simMode) {
   $('#status-text').textContent = '● SIMULAÇÃO (dados fictícios)';
   $('#status-text').className = 'sim';
   startSim(onSnapshot, Number(params.get('speed')) || 3000);

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "og": "vite build && (vite preview --port 4174 --strictPort & sleep 2; '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless=new --hide-scrollbars --window-size=1200,630 --virtual-time-budget=5000 --screenshot=public/og.png 'http://localhost:4174/?og'; kill %1)"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
