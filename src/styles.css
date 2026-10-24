@@ -945,14 +945,30 @@ html.overlay #arena.realistic .head::after { display: none; }
 
 /* seletor de idioma com a mesma cara dos botões */
 #lang {
-  font: inherit;
-  color: var(--ink);
+  display: inline-flex;
+  gap: 6px;
+}
+#lang button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
   background: #fff8e7;
   border: 3px solid var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
-  padding: 7px 6px;
   cursor: pointer;
+  opacity: 0.55;
+  filter: grayscale(0.6);
+  transition: opacity 0.15s, filter 0.15s, transform 0.15s;
 }
+#lang button svg { display: block; width: 28px; height: 20px; }
+#lang button:hover { opacity: 0.9; filter: none; }
+#lang button[aria-pressed='true'] {
+  opacity: 1;
+  filter: none;
+  background: var(--gold);
+  transform: translateY(-2px);
+}
+#lang button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 html.overlay #lang { display: none; }
 
 /* =====================================================================

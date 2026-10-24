@@ -2,7 +2,7 @@ import './styles.css';
 import { sfx, isMuted, setMuted } from './audio';
 import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
-import { applyStatic, detectLang, locale, setLang, t, type Lang } from './i18n';
+import { applyStatic, detectLang, getLang, locale, setLang, t, type Lang } from './i18n';
 import { clock, diff, health, winner, type Attack } from './game';
 import { Gore } from './gore';
 import qrcode from 'qrcode-generator';
@@ -319,32 +319,11 @@ styleBtn.addEventListener('click', () => {
   fighters?.forEach((f) => f.setStyle(style));
   updateReach();
   renderStyleBtn();
-
-// Troca de idioma ao vivo, sem recarregar (a luta continua de onde está).
-const langSelect = $<HTMLSelectElement>('#lang');
-function renderLangDependent() {
-  applyStatic();
-  renderMute();
-  renderStyleBtn();
-  renderSimMark();
-  if (prev) renderHud(prev);
-  if (lastStatus) setStatus(lastStatus);
-  else if (simMode) $('#status-text').textContent = t('simStatus');
-  if (waitingBanner) fx.banner(t('waiting'), 'small');
-  if (overlay) renderCredit();
-}
-langSelect.value = document.documentElement.lang.split('-')[0];
-langSelect.addEventListener('change', () => {
-  const lang = langSelect.value as Lang;
-  setLang(lang);
-  storage.set('lang', lang);
-  renderLangDependent();
-});
 });
 renderStyleBtn();
 
 // Troca de idioma ao vivo, sem recarregar (a luta continua de onde está).
-const langSelect = $<HTMLSelectElement>('#lang');
+const langButtons = [...document.querySelectorAll<HTMLButtonElement>('#lang button')];
 function renderLangDependent() {
   applyStatic();
   renderMute();
@@ -356,13 +335,20 @@ function renderLangDependent() {
   if (waitingBanner) fx.banner(t('waiting'), 'small');
   if (overlay) renderCredit();
 }
-langSelect.value = document.documentElement.lang.split('-')[0];
-langSelect.addEventListener('change', () => {
-  const lang = langSelect.value as Lang;
-  setLang(lang);
-  storage.set('lang', lang);
-  renderLangDependent();
-});
+function renderLangButtons() {
+  langButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())));
+}
+renderLangButtons();
+langButtons.forEach((b) =>
+  b.addEventListener('click', () => {
+    const lang = b.dataset.lang as Lang;
+    if (lang === getLang()) return;
+    setLang(lang);
+    storage.set('lang', lang);
+    renderLangButtons();
+    renderLangDependent();
+  }),
+);
 
 // ---------- Pix ----------
 
