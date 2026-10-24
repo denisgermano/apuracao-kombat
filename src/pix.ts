@@ -1,7 +1,7 @@
 // Pix estático no padrão BR Code do Banco Central (EMV QRCPS), sem valor fixo:
 // quem paga escolhe quanto quer dar.
 
-export const PIX_KEY = '7b482d38-89a8-44e2-94a8-26d3697ad2ac';
+export const PIX_KEY = 'a03c9d97-08cf-48c3-aeff-a6b78b67f415';
 
 const field = (id: string, value: string) => id + String(value.length).padStart(2, '0') + value;
 
