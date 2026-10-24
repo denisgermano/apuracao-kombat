@@ -9,7 +9,7 @@ describe('pixPayload', () => {
   });
 
   it('inclui a chave do projeto', () => {
-    const p = pixPayload(PIX_KEY, 'APURACAO KOMBAT', 'BRASILIA');
+    const p = pixPayload(PIX_KEY, 'URNA KOMBAT', 'BRASILIA');
     expect(p).toContain(PIX_KEY);
     expect(p).toMatch(/6304[0-9A-F]{4}$/);
   });

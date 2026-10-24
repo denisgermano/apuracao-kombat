@@ -352,7 +352,7 @@ langButtons.forEach((b) =>
 
 // ---------- Pix ----------
 
-const pixCode = pixPayload(PIX_KEY, 'APURACAO KOMBAT', 'BRASILIA');
+const pixCode = pixPayload(PIX_KEY, 'URNA KOMBAT', 'BRASILIA');
 const pixDialog = $<HTMLDialogElement>('#pix-dialog');
 let qrRendered = false;
 
@@ -437,7 +437,7 @@ function renderOgScene() {
   createFighters(s);
   renderHud(s);
   $('#stats-0').textContent = $('#stats-1').textContent = '';
-  $('#announcer').innerHTML = `APURAÇÃO<br>KOMBAT<small>${t('ogSubtitle')}</small>`;
+  $('#announcer').innerHTML = `URNA<br>KOMBAT<small>${t('ogSubtitle')}</small>`;
   $('#announcer').className = 'sticky';
 }
 
