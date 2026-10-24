@@ -76,6 +76,35 @@ function bodySvg(l: Look): string {
 </svg>`;
 }
 
+// Manchas irregulares (bolha com contorno ondulado), determinísticas para não "pularem" entre renders.
+function blob(cx: number, cy: number, r: number, seed: number): string {
+  const pts = Array.from({ length: 9 }, (_, i) => {
+    const a = (i / 9) * Math.PI * 2;
+    const k = 0.7 + 0.45 * Math.abs(Math.sin(seed * 12.9898 + i * 78.233));
+    return [cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k];
+  });
+  const mid = (i: number) => {
+    const [x1, y1] = pts[i % pts.length];
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    return `${((x1 + x2) / 2).toFixed(1)} ${((y1 + y2) / 2).toFixed(1)}`;
+  };
+  let d = `M${mid(0)}`;
+  for (let i = 1; i <= pts.length; i++) {
+    const [x, y] = pts[i % pts.length];
+    d += ` Q${x.toFixed(1)} ${y.toFixed(1)} ${mid(i)}`;
+  }
+  return `${d} Z`;
+}
+
+// Sangue acumulado na roupa: cada nível (data-wounds=1..4) revela mais manchas.
+const WOUNDS = `
+  <g class="wounds" fill="#6e0000">
+    <g class="w1"><path d="${blob(114, 108, 9, 1)}"/><rect x="113" y="112" width="3" height="20" rx="1.5"/></g>
+    <g class="w2"><path d="${blob(86, 134, 12, 2)}"/><rect x="84" y="140" width="3" height="16" rx="1.5"/></g>
+    <g class="w3"><path d="${blob(108, 152, 14, 3)}"/><path d="${blob(126, 98, 7, 4)}"/><circle cx="96" cy="118" r="2.5"/></g>
+    <g class="w4"><path d="${blob(94, 172, 16, 5)}"/><path d="${blob(118, 176, 10, 6)}"/><circle cx="128" cy="140" r="3"/><circle cx="74" cy="160" r="2.5"/><rect x="104" y="160" width="3" height="26" rx="1.5"/></g>
+  </g>`;
+
 function realSvg(o: Outfit, id: string): string {
   // Mesmo esqueleto de articulações do cartoon (ombro, quadril), com cotovelo e joelho.
   // Desenhado olhando para a direita; membros de trás levam sombra.
@@ -136,6 +165,7 @@ function realSvg(o: Outfit, id: string): string {
     <path d="M64 84 Q100 72 136 84 Q145 90 142 106 L133 150 L128 188 L72 188 L67 150 L58 106 Q55 90 64 84 Z" fill="${o.jacket}"/>
     <path d="M64 84 Q100 72 136 84 Q145 90 142 106 L133 150 L128 188 L72 188 L67 150 L58 106 Q55 90 64 84 Z" fill="${g('torso')}"/>
     ${front}
+    ${WOUNDS}
     <rect x="72" y="180" width="56" height="9" rx="2" fill="#151515"/>
     <rect x="96" y="180" width="9" height="9" rx="1" fill="#9a8a5a"/>
   </g>
@@ -198,6 +228,19 @@ export class Fighter {
     this.el.classList.add(pose);
     await wait(ms);
     this.el.classList.remove(pose);
+  }
+
+  /** Mais uma camada de sangue na roupa (só aparece no estilo realista). */
+  addWound(levels = 1) {
+    const n = Math.min(4, Number(this.el.dataset.wounds ?? 0) + levels);
+    this.el.dataset.wounds = String(n);
+  }
+
+  /** Centro do peito: de onde o sangue sai (longe da foto do rosto). */
+  chestPoint(relativeTo: HTMLElement) {
+    const r = this.el.querySelector('.body')!.getBoundingClientRect();
+    const o = relativeTo.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - o.left, y: r.top + r.height * 0.4 - o.top };
   }
 
   setState(state: State) {

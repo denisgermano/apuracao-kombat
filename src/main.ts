@@ -4,6 +4,7 @@ import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
 import { applyStatic, detectLang, locale, setLang, t, type Lang } from './i18n';
 import { clock, diff, health, winner, type Attack } from './game';
+import { Gore } from './gore';
 import qrcode from 'qrcode-generator';
 import { PIX_KEY, pixPayload } from './pix';
 import { startSim } from './sim';
@@ -53,6 +54,9 @@ const overlay = params.has('overlay');
 document.documentElement.classList.toggle('overlay', overlay);
 const stage = $('#stage');
 const fx = new Fx(arena, $('#announcer'));
+const gore = new Gore(arena);
+// "Bloody mode" só no estilo realista; o cartoon continua leve.
+const bloody = () => style === 'real';
 
 const fmtInt = (n: number) => n.toLocaleString(locale());
 const fmtPct = (n: number) => n.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -150,6 +154,13 @@ async function playAttack(ev: Attack, next: Snapshot) {
   fx.shake(strength);
   sfx.hit(strength);
   if (strength >= 3) fx.flash();
+  if (bloody()) {
+    const away = D.side === 0 ? -1 : 1;
+    gore.burst(D.chestPoint(arena), 6 + strength * 8, strength, away);
+    sfx.splat(strength);
+    if (strength >= 1) D.addWound(strength >= 3 ? 2 : 1);
+    if (strength >= 3) gore.screen(1); // respingo na tela só nos especiais
+  }
   renderHud(next);
   if (ev.delta >= 0.005) {
     const p = A.headPoint(arena);
@@ -182,16 +193,48 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   fx.shake(5);
   fx.spark(L.headPoint(arena), 5);
   fx.spark(L.headPoint(arena), 4);
-  L.setState('ko');
+  if (bloody()) await bloodyFatality(L);
+  else L.setState('ko');
   await anim;
 
   sfx.say('Fatality');
-  await fx.announce('FATALITY', 2200, 'red fatality');
+  const fatality = fx.announce('FATALITY', 2600, `red fatality${bloody() ? ' gore' : ''}`);
+  if (bloody()) {
+    await wait(350);
+    gore.dripText($('#announcer'));
+  }
+  await fatality;
+  arena.classList.remove('lights-out');
   W.setState('win');
   sfx.say(`${W.cand.name.split(' ')[0]} wins`);
   fx.banner(`${W.cand.name} WINS`, 'gold');
   arena.classList.add('finished');
   if (!overlay) $('#win-cta').hidden = false;
+}
+
+/** Fatality do estilo realista: luzes apagam, jatos de sangue, poça sob o perdedor. */
+async function bloodyFatality(L: Fighter) {
+  arena.classList.add('lights-out');
+  const away = L.side === 0 ? -1 : 1;
+  L.addWound(4);
+  gore.screen(4, 5200);
+  for (let i = 0; i < 6; i++) {
+    gore.burst(L.chestPoint(arena), 16, 4, i % 2 ? 0 : away);
+    sfx.splat(3);
+    fx.shake(3);
+    await wait(170);
+  }
+  L.setState('ko');
+  await wait(750); // espera o corpo cair para posicionar a poça
+  const r = L.el.getBoundingClientRect();
+  const o = arena.getBoundingClientRect();
+  const scale = r.width / 200 || 1;
+  const toward = L.side === 0 ? 1 : -1; // o corpo cai com os pés para o lado do adversário
+  const feetX = r.left + r.width / 2 + toward * 150 * scale - o.left;
+  const head = L.headPoint(arena);
+  gore.pool({ x: (feetX + head.x) / 2, y: r.bottom - o.top - 22 * scale }, Math.abs(head.x - feetX) + 120 * scale);
+  gore.burst(L.chestPoint(arena), 24, 5, 0);
+  sfx.splat(4);
 }
 
 async function handle(s: Snapshot) {

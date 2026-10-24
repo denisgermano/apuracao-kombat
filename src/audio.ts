@@ -121,6 +121,10 @@ export const sfx = {
     tone(220, 0.6, 0.2, 'sawtooth', 880);
     noise(0.6, 300, 0.2, 3000);
   },
+  splat: (strength: number) => {
+    noise(0.18 + 0.06 * strength, 220, 0.6 + 0.1 * strength, 90);
+    tone(70, 0.25, 0.5, 'sine', 40);
+  },
   explosion: () => {
     noise(1.2, 200, 0.9, 60);
     tone(90, 1, 0.8, 'square', 30);

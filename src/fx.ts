@@ -23,7 +23,7 @@ export class Fx {
     burst.style.setProperty('--size', `${70 + strength * 50}px`);
     const n = 6 + strength * 4;
     for (let i = 0; i < n; i++) {
-      const bit = this.spawn('blood', p.x, p.y);
+      const bit = this.spawn('bit', p.x, p.y);
       const ang = Math.random() * Math.PI * 2;
       const dist = 40 + Math.random() * (60 + strength * 40);
       bit.style.setProperty('--dx', `${Math.cos(ang) * dist}px`);
@@ -65,8 +65,10 @@ export class Fx {
     a.className = '';
     a.textContent = text;
     void a.offsetWidth;
+    a.style.animationDuration = `${ms}ms`;
     a.className = `show ${cls}`;
     await wait(ms);
+    a.style.animationDuration = '';
     a.className = '';
   }
 

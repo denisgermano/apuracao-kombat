@@ -943,3 +943,122 @@ html.overlay #arena.realistic .head::after { display: none; }
   cursor: pointer;
 }
 html.overlay #lang { display: none; }
+
+/* =====================================================================
+   BLOODY MODE (só no estilo realista)
+   ===================================================================== */
+
+#stage { z-index: 2; }
+
+/* manchas na roupa, reveladas por data-wounds no lutador */
+.wounds g { opacity: 0; transition: opacity 0.25s; }
+.wounds { mix-blend-mode: multiply; }
+.fighter[data-wounds="1"] .w1,
+.fighter[data-wounds="2"] :is(.w1, .w2),
+.fighter[data-wounds="3"] :is(.w1, .w2, .w3),
+.fighter[data-wounds="4"] .wounds g { opacity: 0.9; }
+
+.drop, .splat, .pool, .text-drip, .screen-blood { position: absolute; pointer-events: none; }
+
+.drop {
+  z-index: 1; /* atrás dos lutadores: o sangue nunca cobre as fotos */
+  margin: -4px 0 0 -4px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 35% 30%, #d42020, #7a0000 60%, #3d0000);
+}
+
+.splat {
+  z-index: 1;
+  transform: translate(-50%, -50%) rotate(var(--rot));
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 30% 45% at 22% 40%, #5c0000 60%, transparent 62%),
+    radial-gradient(ellipse 28% 40% at 78% 58%, #5c0000 60%, transparent 62%),
+    radial-gradient(ellipse 50% 55% at 50% 50%, #7a0000 58%, #4a0000 70%, transparent 72%);
+  opacity: 0.92;
+  animation: splat-in 0.18s ease-out;
+  transition: opacity 4s;
+}
+.splat.fade { opacity: 0; }
+
+@keyframes splat-in { from { transform: translate(-50%, -50%) rotate(var(--rot)) scale(0.3); } }
+
+.pool {
+  z-index: 1;
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 40% 40%, #ffffff22 0 6%, transparent 14%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, #6a0000 55%, #3b0000 68%, transparent 71%);
+  animation: pool-grow 3.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes pool-grow { to { transform: translate(-50%, -50%) scale(1); } }
+
+/* respingos na "lente" */
+.screen-blood {
+  inset: 0;
+  z-index: 8;
+  animation: lens-fade var(--life) ease-in forwards;
+}
+
+.screen-blood i {
+  position: absolute;
+  border-radius: 46% 54% 50% 50% / 50% 46% 54% 50%;
+  background: radial-gradient(circle at 40% 35%, #b30000cc, #7a0000ee 45%, #4a0000 62%, transparent 66%);
+  filter: blur(0.4px);
+  opacity: 0.9;
+  animation: lens-hit 0.16s ease-out both, lens-slide var(--life) linear both;
+}
+
+.screen-blood i::before {
+  content: '';
+  position: absolute;
+  inset: -120%;
+  background: var(--dots);
+}
+
+.screen-blood i::after {
+  content: '';
+  position: absolute;
+  left: 42%;
+  top: 60%;
+  width: 16%;
+  height: var(--drip);
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(#6a0000dd, #4a000099);
+}
+
+@keyframes lens-hit { from { transform: scale(0.2); opacity: 0; } }
+@keyframes lens-slide { to { translate: 0 60px; } }
+@keyframes lens-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* letreiro escorrendo */
+.text-drip {
+  z-index: 9;
+  width: 7px;
+  height: 0;
+  margin-left: -3px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(#a00000, #5a0000);
+  animation: text-drip 2.6s ease-in forwards;
+}
+
+@keyframes text-drip {
+  0% { height: 0; opacity: 1; }
+  80% { height: var(--len); opacity: 1; }
+  100% { height: var(--len); opacity: 0; }
+}
+
+#announcer.gore {
+  color: #c80000;
+  -webkit-text-stroke: 3px #1a0000;
+  text-shadow: 0 6px 0 #4a0000, 0 0 40px #ff000080;
+}
+
+/* luzes apagam no fatality */
+#arena .sky, #arena .congress, #arena .floor { transition: filter 0.6s; }
+#arena.lights-out .sky,
+#arena.lights-out .congress,
+#arena.lights-out .floor { filter: brightness(0.28) saturate(0.5) sepia(0.4) hue-rotate(-20deg); }
+#arena.lights-out .vignette { background: radial-gradient(ellipse at 50% 60%, transparent 30%, #000 85%); }
