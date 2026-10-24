@@ -562,7 +562,9 @@ html, body {
   .rig { animation: none; }
 }
 
-.fighter.right .emblem { transform: scaleX(-1); transform-box: fill-box; transform-origin: center; }
+/* desfaz o espelhamento do lutador da direita em torno de x=100 (centro do viewBox de 200).
+   Coordenadas fixas porque o WebKit (iPhone) ignora transform-box: fill-box em texto SVG. */
+.fighter.right .emblem { transform: translate(200px, 0) scaleX(-1); transform-box: view-box; transform-origin: 0 0; }
 
 /* ---------- cena estática da imagem de compartilhamento (?og) ---------- */
 
