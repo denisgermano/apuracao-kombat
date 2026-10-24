@@ -26,6 +26,13 @@
     <main id="arena">
       <div class="sky"></div>
       <svg class="congress" viewBox="0 0 800 220" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs>
+          <linearGradient id="congress-real" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#3a3f4f" />
+            <stop offset="0.7" stop-color="#1a1c24" />
+            <stop offset="1" stop-color="#0c0d12" />
+          </linearGradient>
+        </defs>
         <rect x="372" y="20" width="22" height="160" />
         <rect x="406" y="20" width="22" height="160" />
         <rect x="372" y="70" width="56" height="8" />
@@ -35,6 +42,9 @@
         <rect x="40" y="179" width="720" height="41" />
       </svg>
       <div class="floor"></div>
+      <div class="atmo fog" aria-hidden="true"></div>
+      <div class="atmo vignette" aria-hidden="true"></div>
+      <div class="atmo grain" aria-hidden="true"></div>
 
       <header id="hud">
         <div class="side s0">
@@ -59,6 +69,7 @@
       <footer id="status">
         <span id="status-text">● conectando ao TSE…</span>
         <span id="updated"></span>
+        <button id="style" type="button" title="Trocar estilo visual"></button>
         <button id="mute" type="button"></button>
       </footer>
     </main>

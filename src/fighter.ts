@@ -22,6 +22,25 @@ const FALLBACK: Look[] = [
   { shirt: '#2471a3', accent: '#fff', glove: '#1a5276', pants: '#222', emblem: '', focus: '50% 25%' },
 ];
 
+export type Style = 'cartoon' | 'real';
+
+interface Outfit {
+  skin: string;
+  jacket: string; // terno ou camisa (tronco e mangas)
+  shirt: string; // camisa aparecendo no decote
+  tie: string | null;
+  pants: string;
+  shoes: string;
+  focus: string;
+}
+
+// Roupas iguais às das fotos oficiais, para a foto emendar no corpo.
+const OUTFITS: Record<string, Outfit> = {
+  '13': { skin: '#d49a7c', jacket: '#1f3160', shirt: '#eef2f7', tie: '#4f86c6', pants: '#1a2747', shoes: '#141414', focus: '50% 30%' },
+  '22': { skin: '#dfa98a', jacket: '#b9cfe6', shirt: '#b9cfe6', tie: null, pants: '#2b2f3a', shoes: '#1c140f', focus: '50% 16%' },
+};
+const FALLBACK_OUTFIT: Outfit = { skin: '#d9a184', jacket: '#333', shirt: '#eee', tie: null, pants: '#222', shoes: '#111', focus: '50% 25%' };
+
 const SKIN = '#e9b48f';
 const INK = '#111';
 
@@ -57,30 +76,118 @@ function bodySvg(l: Look): string {
 </svg>`;
 }
 
+function realSvg(o: Outfit, id: string): string {
+  // Mesmo esqueleto de articulações do cartoon (ombro, quadril), com cotovelo e joelho.
+  // Desenhado olhando para a direita; membros de trás levam sombra.
+  const g = (name: string) => `url(#${id}-${name})`;
+  const arm = (cls: string, x: number) => `
+  <g class="part arm ${cls}" style="transform-origin:${x}px 90px">
+    <rect x="${x - 10}" y="86" width="20" height="58" rx="10" fill="${g('cloth')}"/>
+    <g class="forearm" style="transform-origin:${x}px 140px">
+      <rect x="${x - 9}" y="136" width="18" height="52" rx="9" fill="${g('cloth')}"/>
+      <rect x="${x - 8}" y="184" width="16" height="6" rx="2" fill="${o.shirt}"/>
+      <rect x="${x - 11}" y="188" width="22" height="22" rx="8" fill="${g('skin')}"/>
+      <path d="M${x - 7} 196 h14 M${x - 7} 202 h14" stroke="#0003" stroke-width="1.5"/>
+    </g>
+  </g>`;
+  const leg = (cls: string, x: number) => `
+  <g class="part leg ${cls}" style="transform-origin:${x}px 186px">
+    <rect x="${x - 13}" y="182" width="26" height="70" rx="12" fill="${g('pants')}"/>
+    <g class="shin" style="transform-origin:${x}px 248px">
+      <rect x="${x - 11}" y="244" width="22" height="64" rx="10" fill="${g('pants')}"/>
+      <path d="M${x - 13} 302 h28 q10 0 10 8 v6 h-38 z" fill="${o.shoes}"/>
+    </g>
+  </g>`;
+  const front = o.tie
+    ? `<path d="M90 78 L100 116 L110 78 Z" fill="${o.shirt}"/>
+       <path d="M97 84 h6 l3 34 l-6 9 l-6 -9 z" fill="${o.tie}"/>
+       <path d="M86 80 L100 124 L92 104 Z M114 80 L100 124 L108 104 Z" fill="#0004"/>
+       <circle cx="100" cy="150" r="2" fill="#0006"/><circle cx="100" cy="166" r="2" fill="#0006"/>`
+    : `<path d="M93 76 L100 92 L107 76 Z" fill="${g('skin')}"/>
+       <path d="M100 92 V182" stroke="#0002" stroke-width="1.5"/>
+       <circle cx="100" cy="110" r="1.6" fill="#0003"/><circle cx="100" cy="136" r="1.6" fill="#0003"/>
+       <circle cx="100" cy="162" r="1.6" fill="#0003"/>`;
+  return `
+<svg viewBox="0 0 200 320" class="body real" aria-hidden="true">
+  <defs>
+    <linearGradient id="${id}-cloth" x1="0" x2="1">
+      <stop offset="0" stop-color="${o.jacket}" stop-opacity="1"/>
+      <stop offset="0.55" stop-color="${o.jacket}"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="${id}-torso" x1="0" x2="1">
+      <stop offset="0" stop-color="${o.jacket}"/>
+      <stop offset="0.35" stop-color="#fff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="${o.jacket}"/>
+    </linearGradient>
+    <linearGradient id="${id}-pants" x1="0" x2="1">
+      <stop offset="0" stop-color="${o.pants}"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <radialGradient id="${id}-skin" cx="0.35" cy="0.3" r="0.9">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.35"/>
+      <stop offset="0.4" stop-color="${o.skin}"/>
+      <stop offset="1" stop-color="#7a4a35"/>
+    </radialGradient>
+  </defs>
+  <g class="shade">${leg('back', 89)}${arm('back', 70)}</g>
+  <rect x="91" y="56" width="18" height="30" rx="6" fill="${g('skin')}"/>
+  <g class="part torso">
+    <path d="M64 84 Q100 72 136 84 Q145 90 142 106 L133 150 L128 188 L72 188 L67 150 L58 106 Q55 90 64 84 Z" fill="${o.jacket}"/>
+    <path d="M64 84 Q100 72 136 84 Q145 90 142 106 L133 150 L128 188 L72 188 L67 150 L58 106 Q55 90 64 84 Z" fill="${g('torso')}"/>
+    ${front}
+    <rect x="72" y="180" width="56" height="9" rx="2" fill="#151515"/>
+    <rect x="96" y="180" width="9" height="9" rx="1" fill="#9a8a5a"/>
+  </g>
+  ${leg('front', 111)}${arm('front', 130)}
+</svg>`;
+}
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export class Fighter {
   readonly el: HTMLElement;
-  private head: HTMLElement;
+  private head!: HTMLElement;
   readonly look: Look;
+  private outfit: Outfit;
+  private style: Style;
 
   constructor(
     parent: HTMLElement,
     readonly side: 0 | 1,
     readonly cand: Candidate,
-    photo: string,
+    private photo: string,
+    style: Style,
   ) {
     this.look = LOOKS[cand.number] ?? FALLBACK[side];
+    this.outfit = OUTFITS[cand.number] ?? FALLBACK_OUTFIT;
+    this.style = style;
     this.el = document.createElement('div');
     this.el.className = `fighter ${side === 0 ? 'left' : 'right'}`;
+    this.render();
+    parent.appendChild(this.el);
+  }
+
+  setStyle(style: Style) {
+    this.style = style;
+    this.render();
+  }
+
+  /** Quanto o golpe precisa avançar além do vão entre os dois (o braço realista é mais longo). */
+  get reachOffset() {
+    return this.style === 'real' ? 30 : 60;
+  }
+
+  private render() {
+    const real = this.style === 'real';
+    const focus = real ? this.outfit.focus : this.look.focus;
     this.el.innerHTML = `
       <div class="shadow"></div>
       <div class="flip"><div class="rig">
-        ${bodySvg(this.look)}
-        <div class="head"><img alt="${cand.name}" src="${photo}" style="object-position:${this.look.focus}"></div>
+        ${real ? realSvg(this.outfit, `f${this.side}`) : bodySvg(this.look)}
+        <div class="head"><img alt="${this.cand.name}" src="${this.photo}" style="object-position:${focus}"></div>
       </div></div>`;
     this.head = this.el.querySelector('.head')!;
-    parent.appendChild(this.el);
   }
 
   /** Executa uma pose e resolve quando termina. */

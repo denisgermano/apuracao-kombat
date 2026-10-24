@@ -202,7 +202,7 @@ html, body {
 #status-text.sim { color: var(--gold); }
 #updated { color: var(--muted); flex: 1; }
 
-#mute {
+#mute, #style {
   font: inherit;
   color: var(--ink);
   background: var(--gold);
@@ -212,7 +212,7 @@ html, body {
   cursor: pointer;
 }
 
-#mute:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+#mute:active, #style:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 
 /* ---------- lutadores ---------- */
 
@@ -572,3 +572,188 @@ html, body {
   text-shadow: 3px 3px 0 var(--ink);
 }
 #arena.og #apuradas { visibility: hidden; }
+
+/* =====================================================================
+   ESTILO REALISTA (#arena.realistic) — ligado pelo botão ou ?style=real
+   ===================================================================== */
+
+.atmo { display: none; position: absolute; inset: 0; pointer-events: none; }
+
+#arena.realistic .atmo { display: block; }
+
+#arena.realistic .sky {
+  background:
+    radial-gradient(circle at 80% 16%, #f4f1e6 0 1.6vmin, #f4f1e655 2vmin, transparent 7vmin),
+    radial-gradient(1px 1px at 12% 22%, #fff9, transparent),
+    radial-gradient(1px 1px at 34% 12%, #fff7, transparent),
+    radial-gradient(1px 1px at 57% 28%, #fff8, transparent),
+    radial-gradient(1px 1px at 68% 8%, #fff6, transparent),
+    radial-gradient(1px 1px at 90% 30%, #fff7, transparent),
+    radial-gradient(1px 1px at 22% 38%, #fff5, transparent),
+    radial-gradient(ellipse at 50% 92%, #c2643a66, transparent 55%),
+    linear-gradient(#03040a 0%, #0a1124 40%, #1d1d33 66%, #4a2c2a 86%, #6d3b26 100%);
+}
+
+#arena.realistic .congress {
+  fill: url(#congress-real);
+  opacity: 1;
+  filter: drop-shadow(0 0 24px #ff9a5c40);
+}
+
+#arena.realistic .floor {
+  background:
+    radial-gradient(ellipse 45% 60% at 50% 0%, #ffd9b026, transparent 70%),
+    repeating-linear-gradient(90deg, #0000 0 calc(12.5% - 1px), #0006 calc(12.5% - 1px) 12.5%),
+    repeating-linear-gradient(#0000 0 22px, #0005 22px 23px),
+    linear-gradient(#3a332e, #15110f 70%, #0a0807);
+  border-top: 2px solid #6b5b50;
+}
+
+#arena.realistic .fog {
+  top: auto;
+  height: 45%;
+  background:
+    radial-gradient(ellipse 40% 50% at 20% 70%, #c9c2d633, transparent 70%),
+    radial-gradient(ellipse 45% 45% at 80% 75%, #c9c2d62a, transparent 70%);
+  animation: drift 18s ease-in-out infinite alternate;
+  z-index: 3;
+}
+
+@keyframes drift { to { transform: translateX(6%); } }
+
+#arena.realistic .vignette {
+  background: radial-gradient(ellipse at 50% 55%, transparent 50%, #000c 100%);
+  z-index: 3;
+}
+
+#arena.realistic .grain {
+  z-index: 3;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 0.6s steps(3) infinite;
+}
+
+@keyframes grain {
+  33% { transform: translate(-3%, 2%); }
+  66% { transform: translate(2%, -3%); }
+}
+
+/* lutador realista: cabeça em proporção humana, foto emendada no pescoço */
+#arena.realistic .fighter { --scale: 1.15; }
+#arena.realistic .rig .body { height: 320px; }
+#arena.realistic .rig .body .shade { filter: brightness(0.62); }
+#arena.realistic .rig {
+  filter: drop-shadow(0 0 1px #000) drop-shadow(6px 10px 10px #0008);
+}
+
+#arena.realistic .head {
+  top: 26px;
+  left: 54px;
+  width: 92px;
+  height: 108px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: hidden;
+  -webkit-mask-image: radial-gradient(ellipse 42% 50% at 50% 50%, #000 62%, transparent 98%);
+  mask-image: radial-gradient(ellipse 42% 50% at 50% 50%, #000 62%, transparent 98%);
+}
+
+/* escurece o fundo branco da foto oficial nas bordas, para fundir com a noite */
+#arena.realistic .head::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 50% 52% at 50% 44%, transparent 58%, #0d1222 88%);
+}
+
+#arena.realistic .head img {
+  transform: scale(1.02);
+  filter: contrast(1.08) saturate(0.92) brightness(0.92) sepia(0.12);
+}
+
+#arena.realistic .fighter.right .head img { transform: scaleX(-1) scale(1.02); }
+#arena.realistic .fighter.ko .head img { filter: grayscale(0.7) brightness(0.7); }
+#arena.realistic .fighter .shadow { background: #000c; filter: blur(6px); }
+
+@media (max-width: 900px) { #arena.realistic .fighter { --scale: 0.85; } }
+@media (max-width: 600px) { #arena.realistic .fighter { --scale: 0.66; } }
+
+/* poses com cotovelo (forearm) e joelho (shin) */
+#arena.realistic .arm.front { transform: rotate(-35deg); }
+#arena.realistic .arm.front .forearm { transform: rotate(-105deg); }
+#arena.realistic .arm.back { transform: rotate(-25deg); }
+#arena.realistic .arm.back .forearm { transform: rotate(-118deg); }
+#arena.realistic .leg.front { transform: rotate(-16deg); }
+#arena.realistic .leg.front .shin { transform: rotate(18deg); }
+#arena.realistic .leg.back { transform: rotate(12deg); }
+#arena.realistic .leg.back .shin { transform: rotate(6deg); }
+#arena.realistic .forearm,
+#arena.realistic .shin { transform-box: view-box; }
+
+#arena.realistic .fighter.jab .arm.front,
+#arena.realistic .fighter.punch .arm.front { animation: r-upper-punch var(--dur) ease-out; }
+#arena.realistic .fighter.jab .arm.front .forearm,
+#arena.realistic .fighter.punch .arm.front .forearm { animation: r-fore-punch var(--dur) ease-out; }
+#arena.realistic .fighter.punch .arm.back { animation: none; }
+
+@keyframes r-upper-punch {
+  0%, 100% { transform: rotate(-35deg); }
+  30%, 55% { transform: rotate(-88deg); }
+}
+
+@keyframes r-fore-punch {
+  0%, 100% { transform: rotate(-105deg); }
+  30%, 55% { transform: rotate(-4deg); }
+}
+
+#arena.realistic .fighter.kick .leg.front { animation: r-thigh-kick var(--dur) ease-out; }
+#arena.realistic .fighter.kick .leg.front .shin { animation: r-shin-kick var(--dur) ease-out; }
+
+@keyframes r-thigh-kick {
+  0%, 100% { transform: rotate(-16deg); }
+  30%, 60% { transform: rotate(-92deg); }
+}
+
+@keyframes r-shin-kick {
+  0%, 100% { transform: rotate(18deg); }
+  15% { transform: rotate(80deg); }
+  30%, 60% { transform: rotate(0deg); }
+}
+
+#arena.realistic .fighter.special .arm.front,
+#arena.realistic .fighter.special .arm.back { animation: r-upper-cast var(--dur) ease-out; }
+#arena.realistic .fighter.special .forearm { animation: r-fore-cast var(--dur) ease-out; }
+
+@keyframes r-upper-cast {
+  0%, 100% { transform: rotate(-30deg); }
+  25%, 75% { transform: rotate(-86deg); }
+}
+
+@keyframes r-fore-cast {
+  0%, 100% { transform: rotate(-110deg); }
+  25%, 75% { transform: rotate(-6deg); }
+}
+
+#arena.realistic .fighter.dizzy .arm.front,
+#arena.realistic .fighter.dizzy .arm.back { transform: rotate(6deg); transition: transform 0.4s; }
+#arena.realistic .fighter.dizzy .forearm { transform: rotate(-12deg); transition: transform 0.4s; }
+
+#arena.realistic .fighter.win .arm.front { transform: rotate(-172deg); transition: transform 0.3s; }
+#arena.realistic .fighter.win .arm.front .forearm { transform: rotate(-12deg); }
+#arena.realistic .fighter.win .arm.back { transform: rotate(-20deg); }
+#arena.realistic .fighter.win .arm.back .forearm { transform: rotate(-125deg); }
+
+/* efeitos mais "sangue e faísca" e menos fliperama */
+#arena.realistic .bit { background: #8a0a0a; box-shadow: none; border-radius: 50%; }
+#arena.realistic .spark {
+  background: radial-gradient(circle, #fff 0 10%, #ffe7b0 22%, #ff9a3c55 45%, transparent 65%);
+  mix-blend-mode: screen;
+}
+#arena.realistic .projectile {
+  background: radial-gradient(circle, #fff 0 15%, #9fe3ff 30%, #2a7fff88 55%, transparent 72%);
+  box-shadow: 0 0 40px #4aa3ff, 0 0 80px #2a7fff66;
+  mix-blend-mode: screen;
+}
+#arena.realistic .projectile span { color: #fff; text-shadow: 0 0 6px #003; }

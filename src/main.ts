@@ -1,6 +1,6 @@
 import './styles.css';
 import { sfx, isMuted, setMuted } from './audio';
-import { Fighter } from './fighter';
+import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
 import { clock, diff, health, winner, type Attack } from './game';
 import { startSim } from './sim';
@@ -14,6 +14,19 @@ const simMode = params.has('sim');
 const ele = params.get('ele') ?? ELEICAO_2T;
 
 const arena = $('#arena');
+
+// Estilo visual: cartoon (padrão) ou realista. ?style= tem prioridade e fica salvo.
+const readStyle = (): Style => {
+  const p = params.get('style');
+  if (p === 'real' || p === 'cartoon') return p;
+  try {
+    return localStorage.getItem('style') === 'real' ? 'real' : 'cartoon';
+  } catch {
+    return 'cartoon';
+  }
+};
+let style = readStyle();
+arena.classList.toggle('realistic', style === 'real');
 const stage = $('#stage');
 const fx = new Fx(arena, $('#announcer'));
 
@@ -65,14 +78,14 @@ function updateReach() {
   const scale = a.width / 200 || 1;
   // distância entre os dois, em px do lutador (antes do scale), menos o alcance do braço
   const gap = (b.left - a.right) / scale;
-  fighters.forEach((f) => f.setReach(Math.max(0, gap + 60)));
+  fighters.forEach((f) => f.setReach(Math.max(0, gap + f.reachOffset)));
 }
 
 function createFighters(s: Snapshot) {
   const photoEle = simMode ? ELEICAO_2T : ele;
   fighters = [
-    new Fighter(stage, 0, s.candidates[0], photoUrl(photoEle, s.candidates[0].sq)),
-    new Fighter(stage, 1, s.candidates[1], photoUrl(photoEle, s.candidates[1].sq)),
+    new Fighter(stage, 0, s.candidates[0], photoUrl(photoEle, s.candidates[0].sq), style),
+    new Fighter(stage, 1, s.candidates[1], photoUrl(photoEle, s.candidates[1].sq), style),
   ];
   updateReach();
   window.addEventListener('resize', updateReach);
@@ -220,6 +233,22 @@ muteBtn.addEventListener('click', () => {
   renderMute();
 });
 renderMute();
+
+const styleBtn = $<HTMLButtonElement>('#style');
+const renderStyleBtn = () => (styleBtn.textContent = style === 'real' ? '🎨 CARTOON' : '📸 REALISTA');
+styleBtn.addEventListener('click', () => {
+  style = style === 'real' ? 'cartoon' : 'real';
+  try {
+    localStorage.setItem('style', style);
+  } catch {
+    // sem storage: vale só para esta visita
+  }
+  arena.classList.toggle('realistic', style === 'real');
+  fighters?.forEach((f) => f.setStyle(style));
+  updateReach();
+  renderStyleBtn();
+});
+renderStyleBtn();
 
 // ?og: cena estática usada para gerar public/og.png (npm run og)
 function renderOgScene() {
