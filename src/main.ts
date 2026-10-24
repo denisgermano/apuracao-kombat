@@ -6,6 +6,7 @@ import { applyStatic, detectLang, locale, setLang, t, type Lang } from './i18n';
 import { clock, diff, health, winner, type Attack } from './game';
 import { Gore } from './gore';
 import qrcode from 'qrcode-generator';
+import { LIVEPIX_USER, LIVEPIX_WIDGET_URL } from './config';
 import { PIX_KEY, pixPayload } from './pix';
 import { startSim } from './sim';
 import { ELEICAO_2T, photoUrl, TseSource, type Snapshot, type Status } from './tse';
@@ -398,6 +399,19 @@ copyBtn.addEventListener('click', async () => {
   }
   setTimeout(() => (copyBtn.textContent = t('pixCopy')), 2500);
 });
+
+// ---------- LivePix: recados pagos, moderados pelo próprio LivePix ----------
+
+if (LIVEPIX_USER) {
+  const link = $<HTMLAnchorElement>('#livepix');
+  link.href = `https://livepix.gg/${encodeURIComponent(LIVEPIX_USER)}`;
+  link.hidden = overlay; // no OBS o streamer usa os próprios alertas
+}
+if (LIVEPIX_WIDGET_URL && !overlay && !params.has('og')) {
+  const alerts = $<HTMLIFrameElement>('#livepix-alerts');
+  alerts.src = LIVEPIX_WIDGET_URL;
+  alerts.hidden = false;
+}
 
 // ---------- Overlay ----------
 

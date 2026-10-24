@@ -36,6 +36,8 @@ const pt = {
   pixKey: 'Chave aleatória:',
   close: 'Fechar',
   ogSubtitle: '2º TURNO · 25/10 · AO VIVO DO TSE',
+  livepixButton: '💬 RECADO',
+  livepixTitle: 'Mande um recado que aparece na arena (via LivePix, moderado)',
 };
 
 export type Key = keyof typeof pt;
@@ -72,6 +74,8 @@ const en: Record<Key, string> = {
   pixKey: 'Random key:',
   close: 'Close',
   ogSubtitle: 'RUNOFF · OCT 25 · LIVE FROM TSE',
+  livepixButton: '💬 MESSAGE',
+  livepixTitle: 'Send a message that shows up in the arena (via LivePix, moderated)',
 };
 
 const es: Record<Key, string> = {
@@ -106,6 +110,8 @@ const es: Record<Key, string> = {
   pixKey: 'Clave aleatoria:',
   close: 'Cerrar',
   ogSubtitle: 'SEGUNDA VUELTA · 25/10 · EN VIVO DEL TSE',
+  livepixButton: '💬 MENSAJE',
+  livepixTitle: 'Envía un mensaje que aparece en la arena (vía LivePix, moderado)',
 };
 
 export const DICTS: Record<Lang, Record<Key, string>> = { pt, en, es };

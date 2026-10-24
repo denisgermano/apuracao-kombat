@@ -1062,3 +1062,34 @@ html.overlay #lang { display: none; }
 #arena.lights-out .congress,
 #arena.lights-out .floor { filter: brightness(0.28) saturate(0.5) sepia(0.4) hue-rotate(-20deg); }
 #arena.lights-out .vignette { background: radial-gradient(ellipse at 50% 60%, transparent 30%, #000 85%); }
+
+/* ---------- LivePix ---------- */
+
+#livepix {
+  font: inherit;
+  color: var(--ink);
+  background: #b388ff;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 8px 10px;
+  text-decoration: none;
+}
+#livepix[hidden] { display: none; }
+
+/* alertas aprovados aparecem entre o placar e os lutadores, sem bloquear cliques */
+#livepix-alerts {
+  position: absolute;
+  left: 50%;
+  top: 120px;
+  z-index: 7;
+  width: min(560px, calc(100vw - 32px));
+  height: 220px;
+  transform: translateX(-50%);
+  border: 0;
+  background: transparent;
+  color-scheme: normal;
+  pointer-events: none;
+}
+#livepix-alerts[hidden] { display: none; }
+
+@media (max-width: 600px) { #livepix-alerts { top: 150px; height: 180px; } }
