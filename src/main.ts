@@ -299,7 +299,7 @@ copyBtn.addEventListener('click', async () => {
 if (overlay) {
   const credit = $<HTMLAnchorElement>('#credit');
   credit.href = location.origin + location.pathname;
-  credit.textContent = (location.host + location.pathname).replace(/\/$/, '');
+  credit.textContent = `${(location.host + location.pathname).replace(/\/$/, '')} · dados TSE · apartidário`;
   if (params.get('sound') === '1') {
     setMuted(false);
     renderMute();
@@ -327,6 +327,8 @@ function renderOgScene() {
 if (params.has('og')) {
   renderOgScene();
 } else if (simMode) {
+  // Tarja impossível de recortar: um print da simulação não pode passar por resultado real.
+  $('#sim-mark').hidden = false;
   $('#status-text').textContent = '● SIMULAÇÃO (dados fictícios)';
   $('#status-text').className = 'sim';
   startSim(onSnapshot, Number(params.get('speed')) || 3000);
