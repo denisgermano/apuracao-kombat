@@ -509,7 +509,16 @@ html, body {
 
 #announcer.red { color: var(--red); text-shadow: 5px 5px 0 var(--ink), 0 0 30px #ff000099; }
 #announcer.gold { color: var(--gold); }
-#announcer.small { font-size: clamp(12px, 2.4vw, 28px); }
+#announcer.small {
+  font-size: clamp(16px, 4.2vw, 28px);
+  line-height: 1.5;
+  /* contorno fino: com fonte pequena o traço de 3px engole as letras */
+  -webkit-text-stroke: 0;
+  text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink), 0 0 18px #ff9d0066;
+}
+@media (max-width: 600px) {
+  #announcer:not(.small) { -webkit-text-stroke-width: 2px; }
+}
 #announcer.show { animation: slam 1.4s ease-out forwards; }
 #announcer.sticky { opacity: 1; animation: slam-in 0.5s ease-out; }
 #announcer.fatality { letter-spacing: 0.08em; }
