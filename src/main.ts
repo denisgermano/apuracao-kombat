@@ -1,0 +1,230 @@
+import './styles.css';
+import { sfx, isMuted, setMuted } from './audio';
+import { Fighter } from './fighter';
+import { Fx } from './fx';
+import { clock, diff, health, winner, type Attack } from './game';
+import { startSim } from './sim';
+import { ELEICAO_2T, photoUrl, TseSource, type Snapshot, type Status } from './tse';
+
+const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const params = new URLSearchParams(location.search);
+const simMode = params.has('sim');
+const ele = params.get('ele') ?? ELEICAO_2T;
+
+const arena = $('#arena');
+const stage = $('#stage');
+const fx = new Fx(arena, $('#announcer'));
+
+const fmtInt = (n: number) => n.toLocaleString('pt-BR');
+const fmtPct = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+let fighters: [Fighter, Fighter] | null = null;
+let prev: Snapshot | null = null;
+let finished = false;
+const queue: Snapshot[] = [];
+let busy = false;
+
+// ---------- HUD ----------
+
+function renderHud(s: Snapshot) {
+  ([0, 1] as const).forEach((i) => {
+    const c = s.candidates[i];
+    const hp = health(s, i);
+    $(`#name-${i}`).textContent = c.name;
+    $(`#bar-${i} .fill`).style.width = `${hp}%`;
+    $(`#bar-${i} .trail`).style.width = `${hp}%`;
+    $(`#bar-${i}`).classList.toggle('over50', s.validVotes > 0 && c.pct > 50);
+    $(`#stats-${i}`).innerHTML =
+      s.validVotes > 0 ? `<b>${fmtPct(c.pct)}%</b> ${fmtInt(c.votes)} votos` : `<b>—</b> aguardando votos`;
+  });
+  const t = clock(s.pctSections);
+  $('#clock').textContent = String(t).padStart(2, '0');
+  $('#clock').classList.toggle('low', t <= 10);
+  $('#apuradas').textContent = `${fmtPct(s.pctSections)}% das seções`;
+  $('#updated').textContent = s.time ? `TSE ${s.date} ${s.time}` : '';
+}
+
+function setStatus(st: Status) {
+  const el = $('#status-text');
+  if (st.kind === 'ok') {
+    el.textContent = `● AO VIVO · consultado ${st.at.toLocaleTimeString('pt-BR')}`;
+    el.className = 'live';
+  } else {
+    el.textContent = `● SINAL PERDIDO (${st.message}) · nova tentativa em ${Math.round(st.retryIn / 1000)}s`;
+    el.className = 'error';
+  }
+}
+
+// ---------- Luta ----------
+
+function updateReach() {
+  if (!fighters) return;
+  const [a, b] = fighters.map((f) => f.el.getBoundingClientRect());
+  const scale = a.width / 200 || 1;
+  // distância entre os dois, em px do lutador (antes do scale), menos o alcance do braço
+  const gap = (b.left - a.right) / scale;
+  fighters.forEach((f) => f.setReach(Math.max(0, gap + 60)));
+}
+
+function createFighters(s: Snapshot) {
+  const photoEle = simMode ? ELEICAO_2T : ele;
+  fighters = [
+    new Fighter(stage, 0, s.candidates[0], photoUrl(photoEle, s.candidates[0].sq)),
+    new Fighter(stage, 1, s.candidates[1], photoUrl(photoEle, s.candidates[1].sq)),
+  ];
+  updateReach();
+  window.addEventListener('resize', updateReach);
+}
+
+const STRENGTH = { jab: 0, punch: 1, kick: 2, special: 3 } as const;
+const DURATION = { jab: 380, punch: 480, kick: 560, special: 900 } as const;
+
+async function playAttack(ev: Attack, next: Snapshot) {
+  const [A, D] = ev.attacker === 0 ? [fighters![0], fighters![1]] : [fighters![1], fighters![0]];
+  const strength = STRENGTH[ev.move];
+  const dur = DURATION[ev.move];
+
+  if (ev.firstBlood) void fx.announce('FIRST BLOOD', 1300, 'red');
+  if (ev.reversal) {
+    sfx.say('Combo breaker');
+    void fx.announce('VIRADA!', 1500, 'gold');
+  }
+
+  sfx.whoosh();
+  const anim = A.play(ev.move, dur);
+  if (ev.move === 'special') {
+    sfx.special();
+    await wait(dur * 0.35);
+    await fx.projectile(A.handPoint(arena), D.headPoint(arena), A.look.emblem || '★', ev.reversal);
+  } else {
+    await wait(dur * 0.4);
+  }
+
+  // impacto
+  void D.play(strength >= 2 ? 'hit-big' : 'hit', 420);
+  fx.spark(D.headPoint(arena), strength);
+  fx.shake(strength);
+  sfx.hit(strength);
+  if (strength >= 3) fx.flash();
+  renderHud(next);
+  if (ev.delta >= 0.005) {
+    const p = A.headPoint(arena);
+    fx.popup({ x: p.x, y: p.y - 90 }, `+${fmtPct(ev.delta)} p.p.`, 'gain');
+  }
+  const hitWord = ['HIT', 'HIT!', 'BRUTAL!', 'OUTSTANDING!'][strength];
+  const dp = D.headPoint(arena);
+  fx.popup({ x: dp.x, y: dp.y - 40 }, hitWord, 'hit');
+
+  await anim;
+  await wait(250);
+}
+
+async function playFinish(w: 0 | 1, s: Snapshot) {
+  finished = true;
+  const W = fighters![w];
+  const L = fighters![w === 0 ? 1 : 0];
+  renderHud(s);
+  L.setState('dizzy');
+  sfx.say('Finish him!');
+  await fx.announce('FINISH HIM!', 2200, 'red');
+
+  sfx.whoosh();
+  sfx.special();
+  const anim = W.play('special', 1200);
+  await wait(400);
+  await fx.projectile(W.handPoint(arena), L.headPoint(arena), W.look.emblem || '★', true);
+  sfx.explosion();
+  fx.flash('#ff2a00');
+  fx.shake(5);
+  fx.spark(L.headPoint(arena), 5);
+  fx.spark(L.headPoint(arena), 4);
+  L.setState('ko');
+  await anim;
+
+  sfx.say('Fatality');
+  await fx.announce('FATALITY', 2200, 'red fatality');
+  W.setState('win');
+  sfx.say(`${W.cand.name.split(' ')[0]} wins`);
+  fx.banner(`${W.cand.name} WINS`, 'gold');
+  arena.classList.add('finished');
+}
+
+async function handle(s: Snapshot) {
+  if (!fighters) {
+    createFighters(s);
+    renderHud(s);
+    prev = s;
+    const w = winner(s);
+    if (s.validVotes <= 0) {
+      fx.banner('AGUARDANDO APURAÇÃO · 17h', 'small');
+    } else {
+      sfx.say('Round two. Fight!');
+      await fx.announce('ROUND 2', 1200);
+      await fx.announce('FIGHT!', 1000, 'red');
+    }
+    if (w !== null) await playFinish(w, s);
+    return;
+  }
+  if (finished) {
+    renderHud(s);
+    return;
+  }
+
+  const ev = diff(prev!, s);
+  if (ev) {
+    if (prev!.validVotes <= 0) {
+      fx.clearBanner();
+      sfx.say('Round two. Fight!');
+      await fx.announce('ROUND 2', 1100);
+      await fx.announce('FIGHT!', 900, 'red');
+    }
+    await playAttack(ev, s);
+  } else {
+    renderHud(s);
+  }
+  prev = s;
+
+  const w = winner(s);
+  if (w !== null) await playFinish(w, s);
+}
+
+async function pump() {
+  if (busy) return;
+  busy = true;
+  try {
+    while (queue.length) {
+      // se acumulou (aba em segundo plano), toca só as últimas para não virar maratona
+      if (queue.length > 3) queue.splice(0, queue.length - 3);
+      await handle(queue.shift()!);
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    busy = false;
+  }
+}
+
+function onSnapshot(s: Snapshot) {
+  queue.push(s);
+  void pump();
+}
+
+// ---------- Controles ----------
+
+const muteBtn = $<HTMLButtonElement>('#mute');
+const renderMute = () => (muteBtn.textContent = isMuted() ? '🔇 SOM OFF' : '🔊 SOM ON');
+muteBtn.addEventListener('click', () => {
+  setMuted(!isMuted());
+  renderMute();
+});
+renderMute();
+
+if (simMode) {
+  $('#status-text').textContent = '● SIMULAÇÃO (dados fictícios)';
+  $('#status-text').className = 'sim';
+  startSim(onSnapshot, Number(params.get('speed')) || 3000);
+} else {
+  new TseSource(ele, onSnapshot, setStatus).start();
+}
