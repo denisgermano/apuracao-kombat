@@ -3,6 +3,8 @@ import { sfx, isMuted, setMuted } from './audio';
 import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
 import { clock, diff, health, winner, type Attack } from './game';
+import qrcode from 'qrcode-generator';
+import { PIX_KEY, pixPayload } from './pix';
 import { startSim } from './sim';
 import { ELEICAO_2T, photoUrl, TseSource, type Snapshot, type Status } from './tse';
 
@@ -27,6 +29,11 @@ const readStyle = (): Style => {
 };
 let style = readStyle();
 arena.classList.toggle('realistic', style === 'real');
+
+// ?overlay=1: fundo transparente para usar como fonte de navegador no OBS.
+// &sound=1 já começa com som (o OBS não bloqueia autoplay).
+const overlay = params.has('overlay');
+document.documentElement.classList.toggle('overlay', overlay);
 const stage = $('#stage');
 const fx = new Fx(arena, $('#announcer'));
 
@@ -162,6 +169,7 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   sfx.say(`${W.cand.name.split(' ')[0]} wins`);
   fx.banner(`${W.cand.name} WINS`, 'gold');
   arena.classList.add('finished');
+  if (!overlay) $('#win-cta').hidden = false;
 }
 
 async function handle(s: Snapshot) {
@@ -249,6 +257,54 @@ styleBtn.addEventListener('click', () => {
   renderStyleBtn();
 });
 renderStyleBtn();
+
+// ---------- Pix ----------
+
+const pixCode = pixPayload(PIX_KEY, 'APURACAO KOMBAT', 'BRASILIA');
+const pixDialog = $<HTMLDialogElement>('#pix-dialog');
+let qrRendered = false;
+
+function openPix() {
+  if (!qrRendered) {
+    const qr = qrcode(0, 'M');
+    qr.addData(pixCode);
+    qr.make();
+    $('#pix-qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+    $('#pix-key').textContent = PIX_KEY;
+    qrRendered = true;
+  }
+  pixDialog.showModal();
+}
+
+$('#pix').addEventListener('click', openPix);
+$('#win-cta').addEventListener('click', openPix);
+$('#pix-close').addEventListener('click', () => pixDialog.close());
+pixDialog.addEventListener('click', (e) => {
+  if (e.target === pixDialog) pixDialog.close(); // clique fora do conteúdo
+});
+
+const copyBtn = $<HTMLButtonElement>('#pix-copy');
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(pixCode);
+    copyBtn.textContent = 'COPIADO! ✓';
+  } catch {
+    copyBtn.textContent = 'NÃO DEU — COPIE A CHAVE ABAIXO';
+  }
+  setTimeout(() => (copyBtn.textContent = 'COPIAR CÓDIGO PIX'), 2500);
+});
+
+// ---------- Overlay ----------
+
+if (overlay) {
+  const credit = $<HTMLAnchorElement>('#credit');
+  credit.href = location.origin + location.pathname;
+  credit.textContent = (location.host + location.pathname).replace(/\/$/, '');
+  if (params.get('sound') === '1') {
+    setMuted(false);
+    renderMute();
+  }
+}
 
 // ?og: cena estática usada para gerar public/og.png (npm run og)
 function renderOgScene() {

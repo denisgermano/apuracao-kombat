@@ -65,14 +65,27 @@
 
       <div id="stage"></div>
       <div id="announcer"></div>
+      <button id="win-cta" type="button" hidden>☕ CURTIU A LUTA? APOIE VIA PIX</button>
+      <a id="credit" target="_blank" rel="noopener"></a>
 
       <footer id="status">
         <span id="status-text">● conectando ao TSE…</span>
         <span id="updated"></span>
+        <button id="pix" type="button" title="Apoie o projeto via Pix">☕ PIX</button>
         <button id="style" type="button" title="Trocar estilo visual"></button>
         <button id="mute" type="button"></button>
       </footer>
     </main>
+
+    <dialog id="pix-dialog" aria-labelledby="pix-title">
+      <h2 id="pix-title">APOIE O LUTADOR</h2>
+      <p>Pague um café pro projeto. Qualquer valor ajuda a manter a arena de pé.</p>
+      <div id="pix-qr" role="img" aria-label="QR Code Pix"></div>
+      <p class="pix-hint">Abra o app do banco, escolha Pix › Ler QR Code<br />ou use o Pix Copia e Cola:</p>
+      <button id="pix-copy" type="button">COPIAR CÓDIGO PIX</button>
+      <p class="pix-key">Chave aleatória:<br /><code id="pix-key"></code></p>
+      <button id="pix-close" type="button" aria-label="Fechar">×</button>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
