@@ -8,4 +8,4 @@ export const LIVEPIX_USER = 'germanolabs';
  * https://widget.livepix.gg/embed/<token>. Mostra na arena as mensagens já aprovadas
  * pela moderação do LivePix.
  */
-export const LIVEPIX_WIDGET_URL = ''; // aguardando a URL do widget de ALERTAS (a recebida era a do QR Code)
+export const LIVEPIX_WIDGET_URL = 'https://widget.livepix.gg/embed/6dff0e57-1db4-43f1-a9b0-ce0a678e4006';

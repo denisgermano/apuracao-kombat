@@ -1082,8 +1082,9 @@ html.overlay #lang { display: none; }
   left: 50%;
   top: 120px;
   z-index: 7;
-  width: min(560px, calc(100vw - 32px));
-  height: 220px;
+  /* folgado: o tamanho do alerta depende do layout escolhido no LivePix */
+  width: min(760px, calc(100vw - 32px));
+  height: 320px;
   transform: translateX(-50%);
   border: 0;
   background: transparent;
