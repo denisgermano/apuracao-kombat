@@ -2,18 +2,80 @@
 
 let ctx: AudioContext | null = null;
 let muted = true;
+let keepAlive: HTMLAudioElement | null = null;
 
 export const isMuted = () => muted;
+
+/** WAV silencioso de 1s gerado em memória (sem arquivo externo). */
+function silentWavUrl() {
+  const rate = 8000;
+  const buf = new ArrayBuffer(44 + rate);
+  const v = new DataView(buf);
+  const str = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + rate, true); str(8, 'WAVE');
+  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  str(36, 'data'); v.setUint32(40, rate, true);
+  new Uint8Array(buf, 44).fill(128); // 8 bits: 128 = silêncio
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
+/**
+ * Precisa rodar dentro do toque/clique do usuário. No iPhone:
+ * - a chave do silencioso cala o Web Audio ("ambient"); `audioSession.type = 'playback'`
+ *   (Safari 17+) e um <audio> silencioso em loop (versões anteriores) mudam a sessão
+ *   para "playback", que ignora a chave;
+ * - o AudioContext só destrava tocando algo no mesmo gesto;
+ * - speechSynthesis só fala depois de uma primeira fala iniciada por gesto.
+ */
+function unlock() {
+  try {
+    const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = 'playback';
+  } catch {
+    // API não suportada
+  }
+
+  keepAlive ??= Object.assign(new Audio(silentWavUrl()), { loop: true });
+  keepAlive.setAttribute('playsinline', '');
+  void keepAlive.play().catch(() => {});
+
+  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!ctx || ctx.state === 'closed') ctx = new Ctor();
+  void ctx.resume();
+  const src = ctx.createBufferSource();
+  src.buffer = ctx.createBuffer(1, 1, 22050);
+  src.connect(ctx.destination);
+  src.start(0);
+
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+  }
+}
 
 export function setMuted(m: boolean) {
   muted = m;
   if (!m) {
-    ctx ??= new AudioContext();
-    void ctx.resume();
+    unlock();
   } else {
-    speechSynthesis?.cancel();
+    keepAlive?.pause();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
   }
 }
+
+// O Safari suspende/interrompe o áudio quando a aba vai para segundo plano ou chega
+// uma ligação; ao voltar, o próximo toque restaura (o iOS exige gesto para isso).
+const revive = () => {
+  if (muted || !ctx || ctx.state === 'running') return;
+  unlock();
+};
+document.addEventListener('touchend', revive, { passive: true });
+document.addEventListener('click', revive);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !muted) void ctx?.resume();
+});
 
 function noise(dur: number, freq: number, gain: number, sweepTo?: number) {
   if (muted || !ctx) return;
