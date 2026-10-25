@@ -7,6 +7,7 @@ import { clock, diff, health, winner, type Attack } from './game';
 import { Gore } from './gore';
 import qrcode from 'qrcode-generator';
 import { LIVEPIX_USER, LIVEPIX_WIDGET_URL } from './config';
+import { storyImage } from './story';
 import { CATCHPHRASES, Toasty } from './toasty';
 import { PIX_KEY, pixPayload } from './pix';
 import { startSim } from './sim';
@@ -62,6 +63,13 @@ const bloody = () => style === 'real';
 
 const fmtInt = (n: number) => n.toLocaleString(locale());
 const fmtPct = (n: number) => n.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** 987.654 por extenso; de 1 milhão para cima, "1,23 mi". */
+const fmtBig = (n: number, digits = 2) =>
+  n < 1e6 ? fmtInt(n) : n.toLocaleString(locale(), { notation: 'compact', maximumFractionDigits: digits });
+/** Vibra junto com os golpes (Android; o iPhone não expõe vibração na web). Som desligado = sem vibrar. */
+const buzz = (pattern: number | number[]) => {
+  if (!overlay && !isMuted()) navigator.vibrate?.(pattern);
+};
 
 let fighters: [Fighter, Fighter] | null = null;
 let prev: Snapshot | null = null;
@@ -75,6 +83,8 @@ let busy = false;
 // ---------- HUD ----------
 
 function renderHud(s: Snapshot) {
+  const [a, b] = s.candidates;
+  const leader = a.votes === b.votes ? -1 : a.votes > b.votes ? 0 : 1;
   ([0, 1] as const).forEach((i) => {
     const c = s.candidates[i];
     const hp = health(s, i);
@@ -84,9 +94,19 @@ function renderHud(s: Snapshot) {
     $(`#bar-${i}`).classList.toggle('over50', s.validVotes > 0 && c.pct > 50);
     $(`#stats-${i}`).innerHTML =
       s.validVotes > 0
-        ? `<b>${fmtPct(c.pct)}%</b> ${t('votes', { n: fmtInt(c.votes) })}`
+        ? `<b>${fmtPct(c.pct)}%</b> ${t('votes', { n: fmtInt(c.votes) })}` +
+          (leader === i ? `<span class="lead">${t('lead', { n: fmtBig(Math.abs(a.votes - b.votes)) })}</span>` : '')
         : `<b>—</b> ${t('awaitingVotes')}`;
   });
+  $('#remaining').textContent =
+    s.validVotes > 0 && s.remainingVoters > 0 ? t('remaining', { r: fmtBig(s.remainingVoters, 1) }) : '';
+  // placar no título: dá para acompanhar com a aba em segundo plano
+  if (s.validVotes > 0 && !params.has('og')) {
+    const first = (n: string) => n.split(' ')[0];
+    document.title =
+      (winnerIdx !== null ? `🏆 ${first(s.candidates[winnerIdx].name)} WINS · ` : '') +
+      `${first(a.name)} ${fmtPct(a.pct)}% x ${fmtPct(b.pct)}% ${first(b.name)} · ${fmtPct(s.pctSections)}%`;
+  }
   const secs = clock(s.pctSections);
   $('#clock').textContent = String(secs).padStart(2, '0');
   $('#clock').classList.toggle('low', secs <= 10);
@@ -94,10 +114,23 @@ function renderHud(s: Snapshot) {
   $('#updated').textContent = s.time ? `TSE ${s.date} ${s.time}` : '';
 }
 
+// Hora em que chegou dado novo do TSE (não a última consulta): mostra quando a apuração "empaca".
+let lastNewData = Date.now();
+const STALE_MS = 5 * 60_000;
+const staleMinutes = () => {
+  const counting = prev && prev.validVotes > 0 && !prev.final && prev.pctSections < 100;
+  const ms = Date.now() - lastNewData;
+  return counting && ms >= STALE_MS ? Math.floor(ms / 60_000) : 0;
+};
+
 function setStatus(st: Status) {
   lastStatus = st;
   const el = $('#status-text');
-  if (st.kind === 'ok') {
+  const stale = staleMinutes();
+  if (st.kind === 'ok' && stale) {
+    el.textContent = t('stale', { m: stale });
+    el.className = 'sim';
+  } else if (st.kind === 'ok') {
     el.textContent = t('live', { t: st.at.toLocaleTimeString(locale()) });
     el.className = 'live';
   } else {
@@ -137,6 +170,7 @@ async function playAttack(ev: Attack, next: Snapshot) {
 
   if (ev.firstBlood) void fx.announce('FIRST BLOOD', 1300, 'red');
   if (ev.reversal) {
+    buzz([120, 60, 120, 60, 240]);
     sfx.say('Combo breaker');
     void fx.announce(t('reversal'), 1500, 'gold');
     nudgeShare();
@@ -158,6 +192,7 @@ async function playAttack(ev: Attack, next: Snapshot) {
   fx.shake(strength);
   sfx.hit(strength);
   if (strength >= 3) fx.flash();
+  if (strength >= 2) buzz(strength >= 3 ? [70, 40, 140] : 50);
   if (bloody()) {
     const away = D.side === 0 ? -1 : 1;
     gore.burst(D.chestPoint(arena), 6 + strength * 8, strength, away);
@@ -186,9 +221,9 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   finished = true;
   const W = fighters![w];
   const L = fighters![w === 0 ? 1 : 0];
+  winnerIdx = w; // antes do renderHud: o título da aba já mostra o vencedor
   renderHud(s);
   L.setState('dizzy');
-  winnerIdx = w;
   nudgeShare();
   sfx.say('Finish him!');
   await fx.announce('FINISH HIM!', 2200, 'red');
@@ -199,6 +234,7 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   await wait(400);
   await fx.projectile(W.handPoint(arena), L.headPoint(arena), W.look.emblem || '★', true);
   sfx.explosion();
+  buzz([200, 80, 400]);
   fx.flash('#ff2a00');
   fx.shake(5);
   fx.spark(L.headPoint(arena), 5);
@@ -247,6 +283,18 @@ async function bloodyFatality(L: Fighter) {
   sfx.splat(4);
 }
 
+// Fim da votação e início da apuração: 17h de Brasília (20h UTC) de 25/10/2026.
+const COUNT_START = Date.UTC(2026, 9, 25, 20, 0, 0);
+
+/** Antes das 17h, contagem regressiva estilo arcade; depois, aguarda os primeiros votos. */
+function renderWaiting() {
+  const ms = COUNT_START - Date.now();
+  if (ms <= 0) return fx.banner(t('waitingFirst'), 'small');
+  const sec = Math.ceil(ms / 1000);
+  const hms = [Math.floor(sec / 3600), Math.floor(sec / 60) % 60, sec % 60].map((n) => String(n).padStart(2, '0'));
+  fx.banner(t('countdown', { t: hms.join(':') }), 'small');
+}
+
 async function handle(s: Snapshot) {
   if (!fighters) {
     createFighters(s);
@@ -254,8 +302,9 @@ async function handle(s: Snapshot) {
     prev = s;
     const w = winner(s);
     if (s.validVotes <= 0) {
-      fx.banner(t('waiting'), 'small');
       waitingBanner = true;
+      renderWaiting();
+      setInterval(() => waitingBanner && renderWaiting(), 1000);
     } else {
       sfx.say('Round two. Fight!');
       await fx.announce('ROUND 2', 1200);
@@ -306,6 +355,7 @@ async function pump() {
 }
 
 function onSnapshot(s: Snapshot) {
+  lastNewData = Date.now();
   queue.push(s);
   void pump();
 }
@@ -347,7 +397,7 @@ function renderLangDependent() {
   if (prev) renderHud(prev);
   if (lastStatus) setStatus(lastStatus);
   else if (simMode) $('#status-text').textContent = t('simStatus');
-  if (waitingBanner) fx.banner(t('waiting'), 'small');
+  if (waitingBanner) renderWaiting();
   if (overlay) renderCredit();
 }
 function renderLangButtons() {
@@ -468,8 +518,42 @@ function openShare() {
   $<HTMLAnchorElement>('#share-x').href =
     `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
   $('#share-native').hidden = !navigator.share;
+  shareImageBtn.hidden = !prev || prev.validVotes <= 0 || !fighters;
+  story = shareImageBtn.hidden ? null : makeStory(); // já começa a gerar: o share do iPhone exige o toque recente
   shareDialog.showModal();
 }
+
+const shareImageBtn = $<HTMLButtonElement>('#share-image');
+let story: Promise<File> | null = null;
+
+function makeStory(): Promise<File> {
+  const s = prev!;
+  const photos = fighters!.map((f) => f.el.querySelector<HTMLImageElement>('.head img')!.src) as [string, string];
+  return storyImage(s, winnerIdx, photos, {
+    headline: winnerIdx !== null ? `${s.candidates[winnerIdx].name} WINS` : t('storyLive', { p: fmtPct(s.pctSections) }),
+    pct: [`${fmtPct(s.candidates[0].pct)}%`, `${fmtPct(s.candidates[1].pct)}%`],
+    votes: [t('votes', { n: fmtInt(s.candidates[0].votes) }), t('votes', { n: fmtInt(s.candidates[1].votes) })],
+    footer: t('storyFooter'),
+    sim: simMode ? t('simMark') : '',
+  }).then((blob) => new File([blob], 'urna-kombat.png', { type: 'image/png' }));
+}
+
+shareImageBtn.addEventListener('click', async () => {
+  shareImageBtn.textContent = t('shareImageBusy');
+  try {
+    const file = await (story ?? makeStory());
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], text: `${shareText()} ${shareUrl}` }).catch(() => {});
+    } else {
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(file), download: file.name });
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  shareImageBtn.textContent = t('shareImage');
+});
 
 /** Destaca o botão nos momentos de pico (virada, FINISH HIM). */
 function nudgeShare() {
@@ -500,6 +584,22 @@ shareCopy.addEventListener('click', async () => {
 $('#share-native').addEventListener('click', () => {
   navigator.share({ title: 'Urna Kombat', text: shareText(), url: shareUrl }).catch(() => {});
 });
+
+// ---------- Tela acesa e aviso de apuração parada ----------
+
+// Quem deixa o celular apoiado assistindo não quer a tela apagando. O navegador solta o
+// bloqueio quando a aba some, então pede de novo ao voltar.
+async function keepAwake() {
+  if (overlay || params.has('og') || document.visibilityState !== 'visible') return;
+  try {
+    await (navigator as Navigator & { wakeLock?: { request(t: 'screen'): Promise<unknown> } }).wakeLock?.request('screen');
+  } catch {
+    // sem suporte, bateria fraca ou aba sem foco
+  }
+}
+void keepAwake();
+document.addEventListener('visibilitychange', () => void keepAwake());
+setInterval(() => lastStatus && setStatus(lastStatus), 30_000);
 
 // ---------- LivePix: recados pagos, moderados pelo próprio LivePix ----------
 

@@ -50,7 +50,15 @@ const pt = {
   shareLive: '{a} {pa}% x {pb}% {b} com {p}% das seções apuradas 🥊 Assista a apuração como luta de fliperama:',
   shareWin: '{w} WINS! 🏆 {a} {pa}% x {pb}% {b}. Veja o fatality da apuração:',
   pixAmountLabel: 'Valor do Pix',
-  pixAnyAmount: 'OUTRO',
+  pixAnyAmount: 'OUTRO',  countdown: 'APURAÇÃO EM {t}',
+  waitingFirst: 'AGUARDANDO OS PRIMEIROS VOTOS…',
+  lead: '▲ {n} à frente',
+  remaining: 'faltam {r} eleitores',
+  stale: '● TSE sem atualização há {m} min',
+  shareImage: '📸 IMAGEM P/ STORIES',
+  shareImageBusy: 'GERANDO…',
+  storyLive: '{p}% DAS SEÇÕES APURADAS',
+  storyFooter: 'dados oficiais do TSE · apartidário',
 };
 
 export type Key = keyof typeof pt;
@@ -101,7 +109,15 @@ const en: Record<Key, string> = {
   shareLive: '{a} {pa}% vs {pb}% {b} with {p}% of precincts counted 🥊 Watch the count as an arcade fight:',
   shareWin: '{w} WINS! 🏆 {a} {pa}% vs {pb}% {b}. Watch the vote-count fatality:',
   pixAmountLabel: 'Pix amount',
-  pixAnyAmount: 'OTHER',
+  pixAnyAmount: 'OTHER',  countdown: 'COUNT STARTS IN {t}',
+  waitingFirst: 'WAITING FOR THE FIRST VOTES…',
+  lead: '▲ {n} ahead',
+  remaining: '{r} voters still to count',
+  stale: '● no TSE update for {m} min',
+  shareImage: '📸 IMAGE FOR STORIES',
+  shareImageBusy: 'GENERATING…',
+  storyLive: '{p}% OF PRECINCTS COUNTED',
+  storyFooter: 'official TSE data · nonpartisan',
 };
 
 const es: Record<Key, string> = {
@@ -150,7 +166,15 @@ const es: Record<Key, string> = {
   shareLive: '{a} {pa}% vs {pb}% {b} con {p}% de las mesas escrutadas 🥊 Mira el escrutinio como pelea de arcade:',
   shareWin: '¡{w} WINS! 🏆 {a} {pa}% vs {pb}% {b}. Mira el fatality del escrutinio:',
   pixAmountLabel: 'Monto del Pix',
-  pixAnyAmount: 'OTRO',
+  pixAnyAmount: 'OTRO',  countdown: 'ESCRUTINIO EN {t}',
+  waitingFirst: 'ESPERANDO LOS PRIMEROS VOTOS…',
+  lead: '▲ {n} adelante',
+  remaining: 'faltan {r} electores',
+  stale: '● TSE sin actualizar hace {m} min',
+  shareImage: '📸 IMAGEN PARA STORIES',
+  shareImageBusy: 'GENERANDO…',
+  storyLive: '{p}% DE LAS MESAS ESCRUTADAS',
+  storyFooter: 'datos oficiales del TSE · apartidista',
 };
 
 export const DICTS: Record<Lang, Record<Key, string>> = { pt, en, es };

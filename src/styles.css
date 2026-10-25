@@ -181,6 +181,14 @@ html, body {
   white-space: nowrap;
 }
 
+#remaining {
+  margin-top: 6px;
+  font-size: clamp(6px, 0.75vw, 9px);
+  color: var(--muted);
+  text-shadow: 2px 2px 0 var(--ink);
+}
+.stats .lead { display: block; margin-top: 6px; color: var(--gold); }
+
 /* ---------- status ---------- */
 
 #status {
@@ -931,6 +939,7 @@ html, body {
   cursor: pointer;
 }
 .share-actions #share-whatsapp { background: #25d366; }
+.share-actions #share-image { background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf); color: #fff; text-shadow: 1px 1px 0 var(--ink); }
 .share-actions #share-x { background: #e7e7e7; }
 .share-actions [hidden] { display: none; }
 
