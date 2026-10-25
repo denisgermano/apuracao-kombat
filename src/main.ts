@@ -2,7 +2,11 @@ import './styles.css';
 import { sfx, isMuted, isLocked, setMuted, onAudioState } from './audio';
 import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
-import { applyStatic, detectLang, getLang, locale, setLang, t, type Lang } from './i18n';
+import { applyStatic, detectLang, getLang, locale, setLang, t, type Key, type Lang } from './i18n';
+import { trendSvg, type Point } from './chart';
+import { loadHistory, sample, saveHistory, startReplay, synthReplay } from './history';
+import { measureFps } from './perf';
+import { StatesSource, type StateRow } from './states';
 import { clock, diff, health, winner, type Attack } from './game';
 import { Gore } from './gore';
 import qrcode from 'qrcode-generator';
@@ -11,13 +15,16 @@ import { storyImage } from './story';
 import { CATCHPHRASES, Toasty } from './toasty';
 import { PIX_KEY, pixPayload } from './pix';
 import { startSim } from './sim';
-import { ELEICAO_2T, photoUrl, TseSource, type Snapshot, type Status } from './tse';
+import { ELEICAO_2T, fetchOnce, photoUrl, TseSource, type Snapshot, type Status } from './tse';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const params = new URLSearchParams(location.search);
 const simMode = params.has('sim');
+// ?replay=1: revê a apuração (histórico gravado neste navegador ou reconstrução ilustrativa)
+const replayMode = !simMode && params.has('replay');
+const liveMode = !simMode && !replayMode;
 const ele = params.get('ele') ?? ELEICAO_2T;
 
 const arena = $('#arena');
@@ -76,6 +83,7 @@ let prev: Snapshot | null = null;
 let finished = false;
 let winnerIdx: 0 | 1 | null = null;
 let lastStatus: Status | null = null;
+let markKey: Key | null = simMode ? 'simMark' : null; // tarja de dados fictícios/ilustrativos
 let waitingBanner = false; // único banner fixo traduzível (o de vitória é sempre "WINS")
 const queue: Snapshot[] = [];
 let busy = false;
@@ -98,6 +106,7 @@ function renderHud(s: Snapshot) {
           (leader === i ? `<span class="lead">${t('lead', { n: fmtBig(Math.abs(a.votes - b.votes)) })}</span>` : '')
         : `<b>—</b> ${t('awaitingVotes')}`;
   });
+  $('#trend').innerHTML = trendSvg(trend);
   $('#remaining').textContent =
     s.validVotes > 0 && s.remainingVoters > 0 ? t('remaining', { r: fmtBig(s.remainingVoters, 1) }) : '';
   // placar no título: dá para acompanhar com a aba em segundo plano
@@ -139,6 +148,39 @@ function setStatus(st: Status) {
   }
 }
 
+/** Placar em uma frase: leitor de tela, notificações. */
+function scoreLine(s: Snapshot) {
+  const [a, b] = s.candidates;
+  return t('srScore', { a: a.name, b: b.name, pa: fmtPct(a.pct), pb: fmtPct(b.pct), p: fmtPct(s.pctSections) });
+}
+
+function announceSr(s: Snapshot) {
+  if (s.validVotes <= 0) return;
+  $('#sr').textContent = (winnerIdx !== null ? `${s.candidates[winnerIdx].name} WINS. ` : '') + scoreLine(s);
+}
+
+// ---------- Gráfico da noite e histórico ----------
+
+let trend: Point[] = [];
+/** Acrescenta ao fim da série; mesma % de seções substitui o ponto (o TSE às vezes republica). */
+function appendByPct<T>(list: T[], item: T, pct: (x: T) => number) {
+  const last = list.at(-1);
+  if (last && pct(item) < pct(last)) return false;
+  if (last && pct(item) === pct(last)) list[list.length - 1] = item;
+  else list.push(item);
+  return true;
+}
+const pushTrend = (s: Snapshot) =>
+  s.validVotes > 0 && appendByPct(trend, { p: s.pctSections, m: s.candidates[0].pct - s.candidates[1].pct }, (q) => q.p);
+
+const history = liveMode ? loadHistory(ele) : [];
+history.forEach(pushTrend);
+function record(s: Snapshot) {
+  if (!liveMode || s.validVotes <= 0 || !appendByPct(history, s, (x) => x.pctSections)) return;
+  if (history.length > 400) history.splice(0, history.length, ...sample(history, 300));
+  saveHistory(ele, history);
+}
+
 // ---------- Luta ----------
 
 function updateReach() {
@@ -171,6 +213,7 @@ async function playAttack(ev: Attack, next: Snapshot) {
   if (ev.firstBlood) void fx.announce('FIRST BLOOD', 1300, 'red');
   if (ev.reversal) {
     buzz([120, 60, 120, 60, 240]);
+    notify(t('reversal'), scoreLine(next));
     sfx.say('Combo breaker');
     void fx.announce(t('reversal'), 1500, 'gold');
     nudgeShare();
@@ -221,6 +264,7 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   finished = true;
   const W = fighters![w];
   const L = fighters![w === 0 ? 1 : 0];
+  notify(`${s.candidates[w].name} WINS`, scoreLine(s));
   winnerIdx = w; // antes do renderHud: o título da aba já mostra o vencedor
   renderHud(s);
   L.setState('dizzy');
@@ -256,6 +300,7 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   fx.banner(`${W.cand.name} WINS`, 'gold');
   arena.classList.add('finished');
   if (!overlay) $('#win-cta').hidden = false;
+  announceSr(s);
 }
 
 /** Fatality do estilo realista: luzes apagam, jatos de sangue, poça sob o perdedor. */
@@ -296,6 +341,8 @@ function renderWaiting() {
 }
 
 async function handle(s: Snapshot) {
+  pushTrend(s);
+  if (s.validVotes > 0) startTicker();
   if (!fighters) {
     createFighters(s);
     renderHud(s);
@@ -311,17 +358,20 @@ async function handle(s: Snapshot) {
       await fx.announce('FIGHT!', 1000, 'red');
     }
     if (w !== null) await playFinish(w, s);
+    else announceSr(s);
     return;
   }
   if (finished) {
     renderHud(s);
     prev = s; // o texto de compartilhar usa o placar mais recente
+    announceSr(s);
     return;
   }
 
   const ev = diff(prev!, s);
   if (ev) {
     if (prev!.validVotes <= 0) {
+      notify('FIGHT!', `${t('notifyStart')} ${scoreLine(s)}`);
       fx.clearBanner();
       waitingBanner = false;
       sfx.say('Round two. Fight!');
@@ -336,6 +386,7 @@ async function handle(s: Snapshot) {
 
   const w = winner(s);
   if (w !== null) await playFinish(w, s);
+  else announceSr(s);
 }
 
 async function pump() {
@@ -356,6 +407,7 @@ async function pump() {
 
 function onSnapshot(s: Snapshot) {
   lastNewData = Date.now();
+  record(s);
   queue.push(s);
   void pump();
 }
@@ -394,9 +446,12 @@ function renderLangDependent() {
   renderMute();
   renderStyleBtn();
   renderSimMark();
+  renderNotify();
   if (prev) renderHud(prev);
+  if (lastRows.length) renderTicker(lastRows);
   if (lastStatus) setStatus(lastStatus);
   else if (simMode) $('#status-text').textContent = t('simStatus');
+  else if (replayMode) $('#status-text').textContent = t('replayStatus');
   if (waitingBanner) renderWaiting();
   if (overlay) renderCredit();
 }
@@ -534,7 +589,8 @@ function makeStory(): Promise<File> {
     pct: [`${fmtPct(s.candidates[0].pct)}%`, `${fmtPct(s.candidates[1].pct)}%`],
     votes: [t('votes', { n: fmtInt(s.candidates[0].votes) }), t('votes', { n: fmtInt(s.candidates[1].votes) })],
     footer: t('storyFooter'),
-    sim: simMode ? t('simMark') : '',
+    trend,
+    sim: markKey ? t(markKey) : '',
   }).then((blob) => new File([blob], 'urna-kombat.png', { type: 'image/png' }));
 }
 
@@ -598,8 +654,90 @@ async function keepAwake() {
   }
 }
 void keepAwake();
+if (!params.has('og')) setTimeout(measureFps, 4000);
 document.addEventListener('visibilitychange', () => void keepAwake());
 setInterval(() => lastStatus && setStatus(lastStatus), 30_000);
+
+// ---------- Avisos com o site em segundo plano (virada, início, resultado) ----------
+
+// Android exige service worker para notificação; no iPhone só existe em app instalado.
+const notifyBtn = $<HTMLButtonElement>('#notify');
+const canNotify = 'Notification' in window && !/Android/.test(navigator.userAgent) && !overlay && !replayMode && !params.has('og');
+let notifyOn = canNotify && Notification.permission === 'granted' && storage.get('notify') === '1';
+function renderNotify() {
+  notifyBtn.hidden = !canNotify || Notification.permission === 'denied';
+  notifyBtn.textContent = t(notifyOn ? 'notifyOn' : 'notifyOff');
+  notifyBtn.setAttribute('aria-pressed', String(notifyOn));
+}
+notifyBtn.addEventListener('click', async () => {
+  notifyOn = !notifyOn && (Notification.permission === 'granted' || (await Notification.requestPermission()) === 'granted');
+  storage.set('notify', notifyOn ? '1' : '0');
+  renderNotify();
+});
+renderNotify();
+
+function notify(title: string, body: string) {
+  if (!notifyOn || !document.hidden) return; // com a aba na frente, a própria luta já avisa
+  try {
+    new Notification((simMode ? '[SIM] ' : '') + title, { body, icon: `${location.origin}/og.png`, tag: 'urna-kombat' });
+  } catch {
+    // navegador recusou
+  }
+}
+
+// ---------- Letreiro com o placar por estado ----------
+
+let ticker: StatesSource | null = null;
+let lastRows: StateRow[] = [];
+function startTicker() {
+  if (ticker || !liveMode || overlay || params.has('og')) return;
+  ticker = new StatesSource(ele, renderTicker);
+  ticker.start();
+}
+function renderTicker(rows: StateRow[]) {
+  lastRows = rows;
+  const el = $('#ticker');
+  el.hidden = !rows.length;
+  const item = ({ uf, s }: StateRow) => {
+    const w = s.candidates[0].votes >= s.candidates[1].votes ? 0 : 1;
+    const c = s.candidates[w];
+    const label = uf === 'zz' ? t('abroad') : uf.toUpperCase();
+    return `<span class="uf"><b>${label}</b> <i class="c${w}">${c.name.split(' ')[0]} ${fmtPct(c.pct)}%</i> <small>${fmtPct(s.pctSections)}%</small></span>`;
+  };
+  const html = rows.map(item).join('');
+  const track = el.querySelector<HTMLElement>('.track')!;
+  track.innerHTML = html + html; // conteúdo dobrado: a animação de -50% recomeça sem salto
+  track.style.animationDuration = `${rows.length * 4}s`;
+}
+
+// ---------- Rever a luta ----------
+
+const replayBtn = $<HTMLButtonElement>('#win-replay');
+replayBtn.hidden = simMode;
+replayBtn.addEventListener('click', () => location.assign('./?replay=1'));
+
+async function runReplay() {
+  $('#back-live').hidden = false;
+  $('#status-text').textContent = t('replayStatus');
+  $('#status-text').className = 'sim';
+  const latest = await fetchOnce(ele).catch(() => null);
+  const recorded = loadHistory(ele).filter((s) => s.validVotes > 0);
+  let frames: Snapshot[];
+  if (recorded.length >= 5 && recorded[0].pctSections < 50) {
+    frames = sample(recorded);
+    if (latest && latest.pctSections > frames.at(-1)!.pctSections) frames.push(latest);
+  } else if (latest && latest.validVotes > 0) {
+    markKey = 'replayMark'; // reconstrução: não pode passar pela apuração real
+    $('#sim-mark span').dataset.i18n = 'replayMark';
+    $('#sim-mark span').textContent = t('replayMark');
+    $('#sim-mark').hidden = false;
+    renderSimMark();
+    frames = synthReplay(latest);
+  } else {
+    return location.replace('./'); // nada para rever ainda
+  }
+  startReplay(frames, onSnapshot);
+}
 
 // ---------- LivePix: recados pagos, moderados pelo próprio LivePix ----------
 
@@ -619,7 +757,8 @@ if (LIVEPIX_WIDGET_URL && !overlay && !params.has('og')) {
 // ---------- Tarja da simulação (texto traduzido, então gerada aqui e não no CSS) ----------
 
 function renderSimMark() {
-  const text = t('simMark').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  if (!markKey) return;
+  const text = t(markKey).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='460' height='220'><text x='230' y='120' text-anchor='middle' transform='rotate(-24 230 110)' font-family='monospace' font-weight='bold' font-size='22' fill='#ff3b30' fill-opacity='0.32'>${text}</text></svg>`;
   $('#sim-mark').style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
@@ -663,6 +802,8 @@ if (params.has('og')) {
   $('#status-text').textContent = t('simStatus');
   $('#status-text').className = 'sim';
   startSim(onSnapshot, Number(params.get('speed')) || 3000);
+} else if (replayMode) {
+  void runReplay();
 } else {
   new TseSource(ele, onSnapshot, setStatus).start();
 }

@@ -2,6 +2,8 @@
 // câmera, poça de sangue e letreiro escorrendo. O sangue fica no corpo, no chão e na tela —
 // nunca sobre as fotos dos candidatos (pessoas reais).
 
+import { scaled } from './perf';
+
 type Point = { x: number; y: number };
 
 const MAX_SPLATS = 90;
@@ -31,6 +33,7 @@ export class Gore {
   /** Jato de gotas em arco; cada uma deixa uma mancha onde cai. `dir`: 1 = direita, -1 = esquerda. */
   burst(p: Point, count: number, power: number, dir: 1 | -1 | 0 = 0) {
     const band = this.floorBand();
+    count = scaled(count);
     for (let i = 0; i < count; i++) {
       const size = rand(4, 9 + power * 2);
       const drop = this.el('drop', p.x, p.y);
@@ -74,7 +77,7 @@ export class Gore {
   /** Respingos "na lente da câmera", que escorrem e somem. */
   screen(intensity: number, ms = 2600) {
     const layer = this.el('screen-blood', 0, 0);
-    const blobs = 2 + intensity * 3;
+    const blobs = scaled(2 + intensity * 3);
     for (let i = 0; i < blobs; i++) {
       const b = document.createElement('i');
       // concentrados nas bordas, para não tapar o placar nem o centro da luta
@@ -108,7 +111,7 @@ export class Gore {
   dripText(target: HTMLElement) {
     const r = target.getBoundingClientRect();
     const o = this.arena.getBoundingClientRect();
-    const n = 9 + Math.floor(r.width / 90);
+    const n = scaled(9 + Math.floor(r.width / 90));
     for (let i = 0; i < n; i++) {
       const d = this.el('text-drip', r.left - o.left + rand(0.04, 0.96) * r.width, r.bottom - o.top - rand(18, 34));
       d.style.setProperty('--len', `${rand(30, 120)}px`);

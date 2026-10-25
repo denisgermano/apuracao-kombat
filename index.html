@@ -57,6 +57,7 @@
           <div id="clock">99</div>
           <div id="apuradas">0,00% das seções</div>
           <div id="remaining"></div>
+          <div id="trend"></div>
         </div>
         <div class="side s1">
           <div class="name" id="name-1">—</div>
@@ -71,15 +72,21 @@
       <div id="win-cta" hidden>
         <button id="win-pix" type="button" data-i18n="winCta">☕ CURTIU? APOIE O PROJETO VIA PIX</button>
         <button id="win-share" type="button" data-i18n="shareResult">📤 COMPARTILHAR RESULTADO</button>
+        <button id="win-replay" type="button" hidden data-i18n="replay">▶ REVER A LUTA</button>
       </div>
       <a id="credit" target="_blank" rel="noopener"></a>
       <div id="sim-mark" hidden aria-hidden="true"><span data-i18n="simMark">SIMULAÇÃO · DADOS FICTÍCIOS</span></div>
 
+      <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
       <footer id="status">
+        <div id="ticker" hidden aria-hidden="true"><div class="track"></div></div>
         <span id="status-text" data-i18n="connecting">● conectando ao TSE…</span>
         <span id="updated"></span>
+        <a id="back-live" hidden href="./" data-i18n="backLive">AO VIVO ›</a>
         <span class="disclaimer" data-i18n="disclaimer">Dados oficiais do TSE · animação ilustrativa · sem vínculo com candidatos</span>
         <a id="livepix" hidden target="_blank" rel="noopener" data-i18n="livepixButton" data-i18n-title="livepixTitle">💬 RECADO</a>
+        <button id="notify" type="button" hidden data-i18n-title="notifyTitle"></button>
         <button id="share" type="button" data-i18n="shareButton" data-i18n-title="shareTitle">📤 COMPARTILHAR</button>
         <button id="pix" type="button" data-i18n-title="pixButtonTitle">☕ PIX</button>
         <button id="style" type="button" data-i18n-title="styleTitle"></button>

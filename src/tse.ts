@@ -27,8 +27,15 @@ export interface Snapshot {
   candidates: [Candidate, Candidate]; // ordenados pela posição (seq) — esquerda, direita
 }
 
-export const resultUrl = (ele: string) =>
-  `${BASE}/${ele}/dados/br/br-c0001-e${ele.padStart(6, '0')}-u.json`;
+export const resultUrl = (ele: string, uf = 'br') =>
+  `${BASE}/${ele}/dados/${uf}/${uf}-c0001-e${ele.padStart(6, '0')}-u.json`;
+
+/** Uma leitura só (replay ilustrativo parte do resultado mais recente). */
+export async function fetchOnce(ele: string): Promise<Snapshot> {
+  const res = await fetch(resultUrl(ele), { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseResult(await res.json());
+}
 
 export const photoUrl = (ele: string, sq: string) => `${BASE}/${ele}/fotos/br/${sq}.jpeg`;
 

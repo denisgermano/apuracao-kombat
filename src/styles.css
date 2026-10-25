@@ -187,6 +187,9 @@ html, body {
   color: var(--muted);
   text-shadow: 2px 2px 0 var(--ink);
 }
+#trend { width: min(120px, 100%); height: 30px; margin: 6px auto 0; }
+#trend:empty { display: none; }
+#trend svg { display: block; width: 100%; height: 100%; border: 2px solid var(--ink); background: #0008; }
 .stats .lead { display: block; margin-top: 6px; color: var(--gold); }
 
 /* ---------- status ---------- */
@@ -210,7 +213,7 @@ html, body {
 #status-text.sim { color: var(--gold); }
 #updated { color: var(--muted); flex: 1; }
 
-#mute, #style, #pix, #share {
+#mute, #style, #pix, #share, #notify {
   font: inherit;
   color: var(--ink);
   background: var(--gold);
@@ -220,7 +223,7 @@ html, body {
   cursor: pointer;
 }
 
-#mute:active, #style:active, #pix:active, #share:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+#mute:active, #style:active, #pix:active, #share:active, #notify:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 /* som ligado mas bloqueado pelo navegador até o primeiro toque */
 #mute.locked { background: #ff6b5e; animation: nudge 0.5s ease-in-out infinite alternate; }
 
@@ -784,7 +787,9 @@ html, body {
 #pix { background: #32bcad; }
 
 #share { background: #fff8e7; }
-#share[hidden] { display: none; }
+#share[hidden], #notify[hidden] { display: none; }
+#notify { background: #fff8e7; }
+#notify[aria-pressed='true'] { background: var(--gold); }
 /* pulsa por alguns segundos nos momentos de pico (virada, FINISH HIM) */
 #share.nudge { background: var(--gold); animation: nudge 0.5s ease-in-out infinite alternate; }
 @keyframes nudge { to { transform: scale(1.12) rotate(-2deg); box-shadow: 5px 5px 0 var(--ink), 0 0 18px var(--gold); } }
@@ -817,7 +822,8 @@ html, body {
 #win-pix { animation: cta 1s ease-in-out infinite alternate; }
 #win-cta #win-share { background: #fff8e7; font-size: clamp(8px, 1vw, 12px); padding: 10px 14px; }
 
-#win-cta[hidden] { display: none; }
+#win-cta #win-replay { background: #c9b8ff; font-size: clamp(8px, 1vw, 12px); padding: 10px 14px; }
+#win-cta[hidden], #win-cta [hidden] { display: none; }
 /* no celular o rodapé ocupa 3 linhas: os botões sobem para logo abaixo do WINS */
 @media (max-width: 600px) { #win-cta { bottom: auto; top: calc(33% + 48px); } }
 
@@ -1236,3 +1242,42 @@ html.overlay #lang { display: none; }
   100% { transform: translateY(100%); }
 }
 html.overlay .toasty { bottom: 4%; }
+
+/* ---------- letreiro por estado, leitor de tela, replay, celular fraco ---------- */
+
+#ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  overflow: hidden;
+  padding: 6px 0;
+  white-space: nowrap;
+  background: #000c;
+  border-top: 2px solid var(--gold);
+}
+#ticker[hidden] { display: none; }
+#ticker .track { display: inline-block; animation: ticker 60s linear infinite; }
+#ticker .uf { margin-right: 28px; }
+#ticker b { color: var(--gold); }
+#ticker i { font-style: normal; }
+#ticker .c0 { color: #ff7a70; }
+#ticker .c1 { color: #5fd67e; }
+#ticker small { color: var(--muted); }
+@keyframes ticker { to { transform: translateX(-50%); } }
+html.overlay #ticker { display: none !important; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#back-live { color: var(--gold); text-decoration: none; }
+#back-live[hidden] { display: none; }
+
+html.low-fx .atmo.fog,
+html.low-fx .atmo.grain { display: none; }

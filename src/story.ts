@@ -1,17 +1,18 @@
 // Imagem vertical (1080×1920) do placar para Stories/WhatsApp, desenhada num canvas.
 
+import { COLORS, drawTrend, type Point } from './chart';
 import type { Snapshot } from './tse';
 
 const W = 1080;
 const H = 1920;
 const FONT = '"Press Start 2P", monospace';
-const COLORS = ['#e8322b', '#19a34a'] as const;
 
 export interface StoryText {
   headline: string; // "LULA WINS" ou "63,20% DAS SEÇÕES APURADAS"
   votes: [string, string]; // "51.234.567 votos"
   pct: [string, string]; // "51,20%"
   footer: string;
+  trend: Point[];
   sim: string; // tarja da simulação (vazio no ao vivo): a imagem não pode passar por resultado real
 }
 
@@ -96,6 +97,8 @@ export async function storyImage(s: Snapshot, winner: 0 | 1 | null, photos: [str
     fit(ctx, txt.votes[i], pw, 22);
     outlined(ctx, txt.votes[i], cx, base + 55, '#c9c2d6', 5);
   });
+
+  drawTrend(ctx, txt.trend, 100, 1235, W - 200, 130);
 
   // barra dividida pelos % dos válidos, com marca de 50%
   const bx = 100, bw = W - 200, by = 1420, bh = 56;

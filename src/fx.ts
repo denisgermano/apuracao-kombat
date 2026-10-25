@@ -1,4 +1,5 @@
 // Efeitos visuais: faíscas, tremor de tela, textos de impacto, projétil e locutor.
+import { scaled } from './perf';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -21,7 +22,7 @@ export class Fx {
   spark(p: { x: number; y: number }, strength: number) {
     const burst = this.spawn('spark', p.x, p.y);
     burst.style.setProperty('--size', `${70 + strength * 50}px`);
-    const n = 6 + strength * 4;
+    const n = scaled(6 + strength * 4);
     for (let i = 0; i < n; i++) {
       const bit = this.spawn('bit', p.x, p.y);
       const ang = Math.random() * Math.PI * 2;
