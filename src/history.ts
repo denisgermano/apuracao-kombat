@@ -1,14 +1,16 @@
 // Histórico da apuração gravado no navegador de quem acompanhou (o TSE só publica o
 // arquivo mais recente), usado no gráfico da noite e no "rever a luta".
 
-import type { Snapshot } from './tse';
+import { byNumber, type Snapshot } from './tse';
 
 const key = (ele: string) => `hist-${ele}`;
 
 export function loadHistory(ele: string): Snapshot[] {
   try {
     const h = JSON.parse(localStorage.getItem(key(ele)) ?? '[]');
-    return Array.isArray(h) ? h.filter((s) => s?.candidates?.length === 2) : [];
+    if (!Array.isArray(h)) return [];
+    // gravado antes da correção, quando o lado seguia o ranking (seq): reordena pelo número
+    return h.filter((s) => s?.candidates?.length === 2).map((s) => ({ ...s, candidates: [...s.candidates].sort(byNumber) }));
   } catch {
     return [];
   }

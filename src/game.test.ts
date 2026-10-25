@@ -30,10 +30,10 @@ describe('parseResult', () => {
     expect(s.remainingVoters).toBe(0);
     expect(s.final).toBe(true);
     const [a, b] = s.candidates;
-    expect(a.name).toBe('FLAVIO BOLSONARO');
-    expect(a.pct).toBeCloseTo(47.03, 2);
-    expect(b.name).toBe('LULA');
-    expect(b.pct).toBeCloseTo(45.16, 2);
+    expect(a.name).toBe('LULA'); // 13 sempre à esquerda, mesmo atrás
+    expect(a.pct).toBeCloseTo(45.16, 2);
+    expect(b.name).toBe('FLAVIO BOLSONARO');
+    expect(b.pct).toBeCloseTo(47.03, 2);
     // ninguém passou de 50% no 1º turno
     expect(winner(s)).toBeNull();
   });
@@ -45,6 +45,13 @@ describe('parseResult', () => {
     expect(s.candidates.map((c) => c.name)).toEqual(['LULA', 'FLAVIO BOLSONARO']);
     expect(health(s, 0)).toBe(100);
     expect(clock(s.pctSections)).toBe(99);
+  });
+
+  it('não troca os lados quando o TSE reordena o seq numa virada', () => {
+    const raw = structuredClone(turno2) as typeof turno2;
+    const cands = raw.carg[0].agr.flatMap((g) => g.par.flatMap((p) => p.cand));
+    for (const c of cands) (c as { seq: unknown }).seq = String(c.n) === '22' ? '1' : '2';
+    expect(parseResult(raw).candidates.map((c) => c.number)).toEqual(['13', '22']);
   });
 });
 

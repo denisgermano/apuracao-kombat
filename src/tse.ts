@@ -34,6 +34,8 @@ export interface Candidate {
   status: string;
 }
 
+export const byNumber = (a: Candidate, b: Candidate) => Number(a.number) - Number(b.number);
+
 export interface Snapshot {
   key: string; // muda a cada nova publicação
   date: string;
@@ -43,7 +45,7 @@ export interface Snapshot {
   remainingVoters: number; // eleitores em seções ainda não totalizadas
   validVotes: number;
   final: boolean;
-  candidates: [Candidate, Candidate]; // ordenados pela posição (seq) — esquerda, direita
+  candidates: [Candidate, Candidate]; // ordenados pelo número (13 à esquerda, 22 à direita), fixos a noite toda
 }
 
 export const resultUrl = (ele: string, uf = 'br') =>
@@ -87,7 +89,8 @@ export function parseResult(raw: any): Snapshot {
 
   // No 1º turno há vários candidatos: a luta é entre os dois mais votados.
   const top = [...all].sort((a, b) => b.votes - a.votes || a.seq - b.seq).slice(0, 2);
-  top.sort((a, b) => a.seq - b.seq);
+  // seq é a posição no ranking do TSE (muda numa virada): o lado de cada um vem do número.
+  top.sort(byNumber);
 
   return {
     key: `${raw.idg}-${raw.dg}-${raw.hg}`,
