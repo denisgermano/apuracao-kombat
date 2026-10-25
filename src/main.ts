@@ -350,8 +350,8 @@ function renderWaiting() {
 async function handle(s: Snapshot) {
   pushTrend(s);
   if (s.validVotes > 0) startTicker();
-  if (!fighters) {
-    createFighters(s);
+  if (!prev) {
+    if (!fighters) createFighters(s);
     renderHud(s);
     prev = s;
     if (lastStatus) setStatus(lastStatus); // o status chegou antes do 1º placar (aviso de pausa)
@@ -797,19 +797,37 @@ renderMute();
 // ?og: cena estática usada para gerar public/og.png (npm run og)
 function renderOgScene() {
   arena.classList.add('og');
-  const cand = (number: string, name: string, sq: string, seq: number) => ({
-    number, name, sq, seq, votes: 0, pct: 0, elected: false, status: '',
-  });
-  const s: Snapshot = {
-    key: 'og', date: '', time: '', pctSections: 0, electorate: 0, remainingVoters: 0,
-    validVotes: 0, final: false,
-    candidates: [cand('13', 'LULA', '280002542548', 1), cand('22', 'FLAVIO BOLSONARO', '280002551544', 2)],
-  };
+  const s = placeholderSnapshot();
   createFighters(s);
   renderHud(s);
   $('#stats-0').textContent = $('#stats-1').textContent = '';
   $('#announcer').innerHTML = `URNA<br>KOMBAT<small>${t('ogSubtitle')}</small>`;
   $('#announcer').className = 'sticky';
+}
+
+/** Os dois do 2º turno zerados: lutadores na tela antes de o TSE responder (ou se ele der 429). */
+function placeholderSnapshot(): Snapshot {
+  const cand = (number: string, name: string, sq: string, seq: number) => ({
+    number, name, sq, seq, votes: 0, pct: 0, elected: false, status: '',
+  });
+  return {
+    key: 'og', date: '', time: '', pctSections: 0, electorate: 0, remainingVoters: 0,
+    validVotes: 0, final: false,
+    candidates: [cand('13', 'LULA', '280002542548', 1), cand('22', 'FLAVIO BOLSONARO', '280002551544', 2)],
+  };
+}
+
+/** Mostra os lutadores (e o último placar visto neste aparelho) enquanto o 1º fetch não volta. */
+function preloadFighters() {
+  const last = history.at(-1);
+  if (last) {
+    createFighters(last);
+    renderHud(last);
+  } else if (ele === ELEICAO_2T) {
+    const s = placeholderSnapshot();
+    createFighters(s);
+    s.candidates.forEach((c, i) => ($(`#name-${i}`).textContent = c.name));
+  }
 }
 
 if (params.has('og')) {
@@ -824,5 +842,6 @@ if (params.has('og')) {
 } else if (replayMode) {
   void runReplay();
 } else {
+  preloadFighters();
   new TseSource(ele, onSnapshot, setStatus).start();
 }
