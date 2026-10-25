@@ -71,6 +71,8 @@ const pt = {
   shareImage: '📸 IMAGEM P/ STORIES',
   shareImageBusy: 'GERANDO…',
   storyLive: '{p}% DAS SEÇÕES APURADAS',
+  storyWaiting: 'APURAÇÃO A PARTIR DAS 17H',
+  storyNumber: 'Nº {n}',
   storyFooter: 'dados oficiais do TSE · apartidário',
 };
 
@@ -143,6 +145,8 @@ const en: Record<Key, string> = {
   shareImage: '📸 IMAGE FOR STORIES',
   shareImageBusy: 'GENERATING…',
   storyLive: '{p}% OF PRECINCTS COUNTED',
+  storyWaiting: 'COUNT STARTS AT 5PM (BRT)',
+  storyNumber: 'Nº {n}',
   storyFooter: 'official TSE data · nonpartisan',
 };
 
@@ -213,6 +217,8 @@ const es: Record<Key, string> = {
   shareImage: '📸 IMAGEN PARA STORIES',
   shareImageBusy: 'GENERANDO…',
   storyLive: '{p}% DE LAS MESAS ESCRUTADAS',
+  storyWaiting: 'ESCRUTINIO DESDE LAS 17H',
+  storyNumber: 'Nº {n}',
   storyFooter: 'datos oficiales del TSE · apartidista',
 };
 

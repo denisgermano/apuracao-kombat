@@ -580,7 +580,7 @@ function openShare() {
   $<HTMLAnchorElement>('#share-x').href =
     `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
   $('#share-native').hidden = !navigator.share;
-  shareImageBtn.hidden = !prev || prev.validVotes <= 0 || !fighters;
+  shareImageBtn.hidden = !prev || !fighters; // antes dos votos sai a versão pré-luta
   story = shareImageBtn.hidden ? null : makeStory(); // já começa a gerar: o share do iPhone exige o toque recente
   shareDialog.showModal();
 }
@@ -591,10 +591,15 @@ let story: Promise<File> | null = null;
 function makeStory(): Promise<File> {
   const s = prev!;
   const photos = fighters!.map((f) => f.el.querySelector<HTMLImageElement>('.head img')!.src) as [string, string];
+  const [a, b] = s.candidates;
+  const waiting = s.validVotes <= 0;
   return storyImage(s, winnerIdx, photos, {
-    headline: winnerIdx !== null ? `${s.candidates[winnerIdx].name} WINS` : t('storyLive', { p: fmtPct(s.pctSections) }),
-    pct: [`${fmtPct(s.candidates[0].pct)}%`, `${fmtPct(s.candidates[1].pct)}%`],
-    votes: [t('votes', { n: fmtInt(s.candidates[0].votes) }), t('votes', { n: fmtInt(s.candidates[1].votes) })],
+    headline:
+      winnerIdx !== null ? `${s.candidates[winnerIdx].name} WINS`
+      : waiting ? t('storyWaiting')
+      : t('storyLive', { p: fmtPct(s.pctSections) }),
+    pct: waiting ? [t('storyNumber', { n: a.number }), t('storyNumber', { n: b.number })] : [`${fmtPct(a.pct)}%`, `${fmtPct(b.pct)}%`],
+    votes: waiting ? ['', ''] : [t('votes', { n: fmtInt(a.votes) }), t('votes', { n: fmtInt(b.votes) })],
     footer: t('storyFooter'),
     trend,
     sim: markKey ? t(markKey) : '',
