@@ -1,5 +1,5 @@
 import './styles.css';
-import { sfx, isMuted, setMuted } from './audio';
+import { sfx, isMuted, isLocked, setMuted, onAudioState } from './audio';
 import { Fighter, type Style } from './fighter';
 import { Fx } from './fx';
 import { applyStatic, detectLang, getLang, locale, setLang, t, type Lang } from './i18n';
@@ -313,11 +313,16 @@ function onSnapshot(s: Snapshot) {
 // ---------- Controles ----------
 
 const muteBtn = $<HTMLButtonElement>('#mute');
-const renderMute = () => (muteBtn.textContent = isMuted() ? t('soundOff') : t('soundOn'));
+const renderMute = () => {
+  const locked = isLocked();
+  muteBtn.textContent = isMuted() ? t('soundOff') : locked ? t('soundTap') : t('soundOn');
+  muteBtn.classList.toggle('locked', locked);
+};
 muteBtn.addEventListener('click', () => {
-  setMuted(!isMuted());
+  setMuted(isLocked() ? false : !isMuted()); // bloqueado: o toque só destrava, não desliga
   renderMute();
 });
+onAudioState(renderMute);
 renderMute();
 
 const styleBtn = $<HTMLButtonElement>('#style');

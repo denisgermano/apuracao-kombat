@@ -213,6 +213,8 @@ html, body {
 }
 
 #mute:active, #style:active, #pix:active, #share:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+/* som ligado mas bloqueado pelo navegador até o primeiro toque */
+#mute.locked { background: #ff6b5e; animation: nudge 0.5s ease-in-out infinite alternate; }
 
 /* ---------- lutadores ---------- */
 

@@ -5,6 +5,10 @@ let muted = false; // som ligado por padrão; o navegador só libera no primeiro
 let keepAlive: HTMLAudioElement | null = null;
 
 export const isMuted = () => muted;
+/** Som ligado, mas o navegador ainda não liberou o áudio (falta o primeiro toque/tecla). */
+export const isLocked = () => !muted && ctx?.state !== 'running';
+let onStateChange: (() => void) | null = null;
+export const onAudioState = (fn: () => void) => (onStateChange = fn);
 
 /** WAV silencioso de 1s gerado em memória (sem arquivo externo). */
 function silentWavUrl() {
@@ -41,8 +45,11 @@ function unlock() {
   void keepAlive.play().catch(() => {});
 
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  if (!ctx || ctx.state === 'closed') ctx = new Ctor();
-  void ctx.resume();
+  if (!ctx || ctx.state === 'closed') {
+    ctx = new Ctor();
+    ctx.onstatechange = () => onStateChange?.();
+  }
+  void ctx.resume().then(() => onStateChange?.(), () => {});
   const src = ctx.createBufferSource();
   src.buffer = ctx.createBuffer(1, 1, 22050);
   src.connect(ctx.destination);
