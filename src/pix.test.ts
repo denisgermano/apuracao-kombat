@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PIX_KEY, pixPayload } from './pix';
+import { PIX_KEY, crc16, pixPayload } from './pix';
 
 describe('pixPayload', () => {
   it('reproduz o exemplo do manual do BR Code do Banco Central', () => {
@@ -12,5 +12,12 @@ describe('pixPayload', () => {
     const p = pixPayload(PIX_KEY, 'URNA KOMBAT', 'BRASILIA');
     expect(p).toContain(PIX_KEY);
     expect(p).toMatch(/6304[0-9A-F]{4}$/);
+    expect(p).not.toContain('5404');
+  });
+
+  it('inclui o valor (campo 54) logo após a moeda', () => {
+    const p = pixPayload(PIX_KEY, 'URNA KOMBAT', 'BRASILIA', 10);
+    expect(p).toContain('530398654051' + '0.00');
+    expect(p.slice(-4)).toBe(crc16(p.slice(0, -4)));
   });
 });

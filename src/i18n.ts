@@ -38,6 +38,18 @@ const pt = {
   ogSubtitle: '2º TURNO · 25/10 · AO VIVO DO TSE',
   livepixButton: '💬 RECADO',
   livepixTitle: 'Mande um recado que aparece na arena (via LivePix, moderado)',
+  shareButton: '📤 COMPARTILHAR',
+  shareTitle: 'Chame os amigos para assistir a luta',
+  shareResult: '📤 COMPARTILHAR RESULTADO',
+  shareHeading: 'CHAME A TORCIDA',
+  shareCopy: 'COPIAR LINK',
+  shareCopied: 'COPIADO! ✓',
+  shareMore: 'MAIS…',
+  shareIdle: 'Lula x Flávio Bolsonaro: a apuração do 2º turno ao vivo como luta de fliperama 🥊',
+  shareLive: '{a} {pa}% x {pb}% {b} com {p}% das seções apuradas 🥊 Assista a apuração como luta de fliperama:',
+  shareWin: '{w} WINS! 🏆 {a} {pa}% x {pb}% {b}. Veja o fatality da apuração:',
+  pixAmountLabel: 'Valor do Pix',
+  pixAnyAmount: 'OUTRO',
 };
 
 export type Key = keyof typeof pt;
@@ -76,6 +88,18 @@ const en: Record<Key, string> = {
   ogSubtitle: 'RUNOFF · OCT 25 · LIVE FROM TSE',
   livepixButton: '💬 MESSAGE',
   livepixTitle: 'Send a message that shows up in the arena (via LivePix, moderated)',
+  shareButton: '📤 SHARE',
+  shareTitle: 'Invite friends to watch the fight',
+  shareResult: '📤 SHARE THE RESULT',
+  shareHeading: 'CALL THE CROWD',
+  shareCopy: 'COPY LINK',
+  shareCopied: 'COPIED! ✓',
+  shareMore: 'MORE…',
+  shareIdle: "Lula vs Flávio Bolsonaro: Brazil's runoff count live as an arcade fight 🥊",
+  shareLive: '{a} {pa}% vs {pb}% {b} with {p}% of precincts counted 🥊 Watch the count as an arcade fight:',
+  shareWin: '{w} WINS! 🏆 {a} {pa}% vs {pb}% {b}. Watch the vote-count fatality:',
+  pixAmountLabel: 'Pix amount',
+  pixAnyAmount: 'OTHER',
 };
 
 const es: Record<Key, string> = {
@@ -112,6 +136,18 @@ const es: Record<Key, string> = {
   ogSubtitle: 'SEGUNDA VUELTA · 25/10 · EN VIVO DEL TSE',
   livepixButton: '💬 MENSAJE',
   livepixTitle: 'Envía un mensaje que aparece en la arena (vía LivePix, moderado)',
+  shareButton: '📤 COMPARTIR',
+  shareTitle: 'Invita a tus amigos a ver la pelea',
+  shareResult: '📤 COMPARTIR RESULTADO',
+  shareHeading: 'LLAMA A LA HINCHADA',
+  shareCopy: 'COPIAR ENLACE',
+  shareCopied: '¡COPIADO! ✓',
+  shareMore: 'MÁS…',
+  shareIdle: 'Lula vs Flávio Bolsonaro: el escrutinio de la segunda vuelta en vivo como pelea de arcade 🥊',
+  shareLive: '{a} {pa}% vs {pb}% {b} con {p}% de las mesas escrutadas 🥊 Mira el escrutinio como pelea de arcade:',
+  shareWin: '¡{w} WINS! 🏆 {a} {pa}% vs {pb}% {b}. Mira el fatality del escrutinio:',
+  pixAmountLabel: 'Monto del Pix',
+  pixAnyAmount: 'OTRO',
 };
 
 export const DICTS: Record<Lang, Record<Key, string>> = { pt, en, es };

@@ -67,7 +67,10 @@
       <div id="stage"></div>
       <div id="announcer"></div>
       <iframe id="livepix-alerts" hidden title="LivePix" allow="autoplay" tabindex="-1"></iframe>
-      <button id="win-cta" type="button" hidden data-i18n="winCta">☕ CURTIU? APOIE O PROJETO VIA PIX</button>
+      <div id="win-cta" hidden>
+        <button id="win-pix" type="button" data-i18n="winCta">☕ CURTIU? APOIE O PROJETO VIA PIX</button>
+        <button id="win-share" type="button" data-i18n="shareResult">📤 COMPARTILHAR RESULTADO</button>
+      </div>
       <a id="credit" target="_blank" rel="noopener"></a>
       <div id="sim-mark" hidden aria-hidden="true"><span data-i18n="simMark">SIMULAÇÃO · DADOS FICTÍCIOS</span></div>
 
@@ -76,6 +79,7 @@
         <span id="updated"></span>
         <span class="disclaimer" data-i18n="disclaimer">Dados oficiais do TSE · animação ilustrativa · sem vínculo com candidatos</span>
         <a id="livepix" hidden target="_blank" rel="noopener" data-i18n="livepixButton" data-i18n-title="livepixTitle">💬 RECADO</a>
+        <button id="share" type="button" data-i18n="shareButton" data-i18n-title="shareTitle">📤 COMPARTILHAR</button>
         <button id="pix" type="button" data-i18n-title="pixButtonTitle">☕ PIX</button>
         <button id="style" type="button" data-i18n-title="styleTitle"></button>
         <button id="mute" type="button"></button>
@@ -97,11 +101,28 @@
       <h2 id="pix-title" data-i18n="pixHeading">APOIE O PROJETO</h2>
       <p data-i18n="pixLead">Pague um café pro site. Qualquer valor ajuda a manter a arena de pé.</p>
       <p class="pix-disclaimer" data-i18n-html="pixDisclaimer">Doação ao site, <strong>não</strong> a candidatos ou partidos.<br />Projeto independente e apartidário.</p>
+      <div id="pix-amounts" role="group" data-i18n-aria="pixAmountLabel">
+        <button type="button" data-amount="5">R$ 5</button>
+        <button type="button" data-amount="10">R$ 10</button>
+        <button type="button" data-amount="20">R$ 20</button>
+        <button type="button" data-amount="0" data-i18n="pixAnyAmount">OUTRO</button>
+      </div>
       <div id="pix-qr" role="img" aria-label="QR Code Pix"></div>
       <p class="pix-hint" data-i18n-html="pixHint">Abra o app do banco, escolha Pix › Ler QR Code<br />ou use o Pix Copia e Cola:</p>
       <button id="pix-copy" type="button" data-i18n="pixCopy">COPIAR CÓDIGO PIX</button>
       <p class="pix-key"><span data-i18n="pixKey">Chave aleatória:</span><br /><code id="pix-key"></code></p>
       <button id="pix-close" type="button" data-i18n-aria="close">×</button>
+    </dialog>
+    <dialog id="share-dialog" aria-labelledby="share-title">
+      <h2 id="share-title" data-i18n="shareHeading">CHAME A TORCIDA</h2>
+      <p id="share-preview"></p>
+      <div class="share-actions">
+        <a id="share-whatsapp" target="_blank" rel="noopener">WhatsApp</a>
+        <a id="share-x" target="_blank" rel="noopener">X / Twitter</a>
+        <button id="share-copy" type="button" data-i18n="shareCopy">COPIAR LINK</button>
+        <button id="share-native" type="button" hidden data-i18n="shareMore">MAIS…</button>
+      </div>
+      <button id="share-close" type="button" data-i18n-aria="close">×</button>
     </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>

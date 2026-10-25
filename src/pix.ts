@@ -1,5 +1,5 @@
-// Pix estático no padrão BR Code do Banco Central (EMV QRCPS), sem valor fixo:
-// quem paga escolhe quanto quer dar.
+// Pix estático no padrão BR Code do Banco Central (EMV QRCPS). Sem valor (campo 54),
+// quem paga digita quanto quer dar; com valor, o app já abre preenchido.
 
 export const PIX_KEY = 'a03c9d97-08cf-48c3-aeff-a6b78b67f415';
 
@@ -16,12 +16,13 @@ export function crc16(payload: string): string {
 }
 
 /** Payload "Pix Copia e Cola". Nome e cidade são exibidos pelo app, mas o banco usa os dados da chave. */
-export function pixPayload(key: string, name: string, city: string, txid = '***'): string {
+export function pixPayload(key: string, name: string, city: string, amount?: number, txid = '***'): string {
   const body =
     field('00', '01') +
     field('26', field('00', 'br.gov.bcb.pix') + field('01', key)) +
     field('52', '0000') +
     field('53', '986') +
+    (amount ? field('54', amount.toFixed(2)) : '') +
     field('58', 'BR') +
     field('59', name.slice(0, 25)) +
     field('60', city.slice(0, 15)) +

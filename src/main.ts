@@ -65,6 +65,7 @@ const fmtPct = (n: number) => n.toLocaleString(locale(), { minimumFractionDigits
 let fighters: [Fighter, Fighter] | null = null;
 let prev: Snapshot | null = null;
 let finished = false;
+let winnerIdx: 0 | 1 | null = null;
 let lastStatus: Status | null = null;
 let waitingBanner = false; // único banner fixo traduzível (o de vitória é sempre "WINS")
 const queue: Snapshot[] = [];
@@ -137,6 +138,7 @@ async function playAttack(ev: Attack, next: Snapshot) {
   if (ev.reversal) {
     sfx.say('Combo breaker');
     void fx.announce(t('reversal'), 1500, 'gold');
+    nudgeShare();
   }
 
   sfx.whoosh();
@@ -181,6 +183,8 @@ async function playFinish(w: 0 | 1, s: Snapshot) {
   const L = fighters![w === 0 ? 1 : 0];
   renderHud(s);
   L.setState('dizzy');
+  winnerIdx = w;
+  nudgeShare();
   sfx.say('Finish him!');
   await fx.announce('FINISH HIM!', 2200, 'red');
 
@@ -257,6 +261,7 @@ async function handle(s: Snapshot) {
   }
   if (finished) {
     renderHud(s);
+    prev = s; // o texto de compartilhar usa o placar mais recente
     return;
   }
 
@@ -352,24 +357,31 @@ langButtons.forEach((b) =>
 
 // ---------- Pix ----------
 
-const pixCode = pixPayload(PIX_KEY, 'URNA KOMBAT', 'BRASILIA');
 const pixDialog = $<HTMLDialogElement>('#pix-dialog');
-let qrRendered = false;
+const amountButtons = [...document.querySelectorAll<HTMLButtonElement>('#pix-amounts button')];
+let pixCode = '';
+
+/** Valor sugerido já vem no QR (o app abre preenchido); "outro" gera o QR sem valor. */
+function selectAmount(amount: number) {
+  pixCode = pixPayload(PIX_KEY, 'URNA KOMBAT', 'BRASILIA', amount || undefined);
+  const qr = qrcode(0, 'M');
+  qr.addData(pixCode);
+  qr.make();
+  $('#pix-qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+  amountButtons.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.amount) === amount)));
+}
+amountButtons.forEach((b) => b.addEventListener('click', () => selectAmount(Number(b.dataset.amount))));
 
 function openPix() {
-  if (!qrRendered) {
-    const qr = qrcode(0, 'M');
-    qr.addData(pixCode);
-    qr.make();
-    $('#pix-qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+  if (!pixCode) {
+    selectAmount(10);
     $('#pix-key').textContent = PIX_KEY;
-    qrRendered = true;
   }
   pixDialog.showModal();
 }
 
 $('#pix').addEventListener('click', openPix);
-$('#win-cta').addEventListener('click', openPix);
+$('#win-pix').addEventListener('click', openPix);
 $('#pix-close').addEventListener('click', () => pixDialog.close());
 pixDialog.addEventListener('click', (e) => {
   if (e.target === pixDialog) pixDialog.close(); // clique fora do conteúdo
@@ -384,6 +396,63 @@ copyBtn.addEventListener('click', async () => {
     copyBtn.textContent = t('pixCopyFail');
   }
   setTimeout(() => (copyBtn.textContent = t('pixCopy')), 2500);
+});
+
+// ---------- Compartilhar ----------
+
+const shareDialog = $<HTMLDialogElement>('#share-dialog');
+const shareBtn = $<HTMLButtonElement>('#share');
+const shareUrl = 'https://urnakombat.com.br/';
+
+/** Texto com o placar do momento (sem querystring de sim/overlay no link). */
+function shareText() {
+  const s = prev;
+  if (!s || s.validVotes <= 0) return t('shareIdle');
+  const [a, b] = s.candidates;
+  const fmt = (n: number) => n.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const vars = { a: a.name, b: b.name, pa: fmt(a.pct), pb: fmt(b.pct), p: fmt(s.pctSections) };
+  if (winnerIdx !== null) return t('shareWin', { ...vars, w: s.candidates[winnerIdx].name });
+  return t('shareLive', vars);
+}
+
+function openShare() {
+  const text = shareText();
+  $('#share-preview').textContent = `${text} ${shareUrl}`;
+  $<HTMLAnchorElement>('#share-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(`${text} ${shareUrl}`)}`;
+  $<HTMLAnchorElement>('#share-x').href =
+    `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+  $('#share-native').hidden = !navigator.share;
+  shareDialog.showModal();
+}
+
+/** Destaca o botão nos momentos de pico (virada, FINISH HIM). */
+function nudgeShare() {
+  if (overlay) return;
+  shareBtn.classList.remove('nudge');
+  void shareBtn.offsetWidth;
+  shareBtn.classList.add('nudge');
+  setTimeout(() => shareBtn.classList.remove('nudge'), 10_000);
+}
+
+shareBtn.hidden = overlay;
+shareBtn.addEventListener('click', openShare);
+$('#win-share').addEventListener('click', openShare);
+$('#share-close').addEventListener('click', () => shareDialog.close());
+shareDialog.addEventListener('click', (e) => {
+  if (e.target === shareDialog) shareDialog.close();
+});
+const shareCopy = $<HTMLButtonElement>('#share-copy');
+shareCopy.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(`${shareText()} ${shareUrl}`);
+    shareCopy.textContent = t('shareCopied');
+  } catch {
+    shareCopy.textContent = shareUrl;
+  }
+  setTimeout(() => (shareCopy.textContent = t('shareCopy')), 2500);
+});
+$('#share-native').addEventListener('click', () => {
+  navigator.share({ title: 'Urna Kombat', text: shareText(), url: shareUrl }).catch(() => {});
 });
 
 // ---------- LivePix: recados pagos, moderados pelo próprio LivePix ----------
