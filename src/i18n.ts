@@ -49,7 +49,15 @@ const pt = {
   shareLive: '{a} {pa}% x {pb}% {b} com {p}% das seções apuradas 🥊 Assista a apuração como luta de fliperama:',
   shareWin: '{w} WINS! 🏆 {a} {pa}% x {pb}% {b}. Veja o fatality da apuração:',
   pixAmountLabel: 'Valor do Pix',
-  pixAnyAmount: 'OUTRO',
+  pixAnyAmount: 'OUTRO',  tvButton: '📺 TV',
+  tvTitle: 'Projetar a luta na TV (AirPlay, Chromecast, espelhamento)',
+  tvHeading: 'PROJETAR NA TV',
+  tvCast: '📡 TRANSMITIR (CHROMECAST)',
+  tvFull: '⛶ TELA CHEIA',
+  tvApple: '<strong>iPhone, iPad, Mac:</strong> Central de Controle › <em>Espelhar Tela</em> (AirPlay) › escolha a TV. Gire o celular na horizontal.',
+  tvAndroid: '<strong>Android:</strong> puxe a barra de notificações › <em>Transmitir</em>, <em>Smart View</em> ou <em>Espelhar tela</em>.',
+  tvDesktop: '<strong>Chrome/Edge no PC:</strong> botão TRANSMITIR acima, ou menu ⋮ › <em>Transmitir…</em>',
+  tvSmart: '<strong>Smart TV:</strong> abra o navegador da TV e digite <code>urnakombat.com.br</code>',
 };
 
 export type Key = keyof typeof pt;
@@ -99,7 +107,15 @@ const en: Record<Key, string> = {
   shareLive: '{a} {pa}% vs {pb}% {b} with {p}% of precincts counted 🥊 Watch the count as an arcade fight:',
   shareWin: '{w} WINS! 🏆 {a} {pa}% vs {pb}% {b}. Watch the vote-count fatality:',
   pixAmountLabel: 'Pix amount',
-  pixAnyAmount: 'OTHER',
+  pixAnyAmount: 'OTHER',  tvButton: '📺 TV',
+  tvTitle: 'Show the fight on your TV (AirPlay, Chromecast, mirroring)',
+  tvHeading: 'WATCH ON TV',
+  tvCast: '📡 CAST (CHROMECAST)',
+  tvFull: '⛶ FULL SCREEN',
+  tvApple: '<strong>iPhone, iPad, Mac:</strong> Control Center › <em>Screen Mirroring</em> (AirPlay) › pick your TV. Turn the phone sideways.',
+  tvAndroid: '<strong>Android:</strong> pull down the notification shade › <em>Cast</em>, <em>Smart View</em> or <em>Screen mirroring</em>.',
+  tvDesktop: '<strong>Chrome/Edge on a computer:</strong> CAST button above, or menu ⋮ › <em>Cast…</em>',
+  tvSmart: '<strong>Smart TV:</strong> open the TV browser and type <code>urnakombat.com.br</code>',
 };
 
 const es: Record<Key, string> = {
@@ -147,7 +163,15 @@ const es: Record<Key, string> = {
   shareLive: '{a} {pa}% vs {pb}% {b} con {p}% de las mesas escrutadas 🥊 Mira el escrutinio como pelea de arcade:',
   shareWin: '¡{w} WINS! 🏆 {a} {pa}% vs {pb}% {b}. Mira el fatality del escrutinio:',
   pixAmountLabel: 'Monto del Pix',
-  pixAnyAmount: 'OTRO',
+  pixAnyAmount: 'OTRO',  tvButton: '📺 TV',
+  tvTitle: 'Ver la pelea en la TV (AirPlay, Chromecast, duplicar pantalla)',
+  tvHeading: 'VER EN LA TV',
+  tvCast: '📡 ENVIAR (CHROMECAST)',
+  tvFull: '⛶ PANTALLA COMPLETA',
+  tvApple: '<strong>iPhone, iPad, Mac:</strong> Centro de control › <em>Duplicar pantalla</em> (AirPlay) › elige la TV. Gira el teléfono en horizontal.',
+  tvAndroid: '<strong>Android:</strong> desliza la barra de notificaciones › <em>Enviar</em>, <em>Smart View</em> o <em>Duplicar pantalla</em>.',
+  tvDesktop: '<strong>Chrome/Edge en la PC:</strong> botón ENVIAR arriba, o menú ⋮ › <em>Enviar…</em>',
+  tvSmart: '<strong>Smart TV:</strong> abre el navegador de la TV y escribe <code>urnakombat.com.br</code>',
 };
 
 export const DICTS: Record<Lang, Record<Key, string>> = { pt, en, es };
