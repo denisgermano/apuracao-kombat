@@ -351,6 +351,7 @@ async function handle(s: Snapshot) {
     createFighters(s);
     renderHud(s);
     prev = s;
+    if (lastStatus) setStatus(lastStatus); // o status chegou antes do 1º placar (aviso de pausa)
     const w = winner(s);
     if (s.validVotes <= 0) {
       waitingBanner = true;
