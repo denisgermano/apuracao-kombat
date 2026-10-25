@@ -202,7 +202,7 @@ html, body {
 #status-text.sim { color: var(--gold); }
 #updated { color: var(--muted); flex: 1; }
 
-#mute, #style, #pix, #share, #tv {
+#mute, #style, #pix, #share {
   font: inherit;
   color: var(--ink);
   background: var(--gold);
@@ -212,7 +212,7 @@ html, body {
   cursor: pointer;
 }
 
-#mute:active, #style:active, #pix:active, #share:active, #tv:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+#mute:active, #style:active, #pix:active, #share:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 
 /* ---------- lutadores ---------- */
 
@@ -774,8 +774,7 @@ html, body {
 #pix { background: #32bcad; }
 
 #share { background: #fff8e7; }
-#share[hidden], #tv[hidden] { display: none; }
-#tv { background: #c9b8ff; }
+#share[hidden] { display: none; }
 /* pulsa por alguns segundos nos momentos de pico (virada, FINISH HIM) */
 #share.nudge { background: var(--gold); animation: nudge 0.5s ease-in-out infinite alternate; }
 @keyframes nudge { to { transform: scale(1.12) rotate(-2deg); box-shadow: 5px 5px 0 var(--ink), 0 0 18px var(--gold); } }
@@ -832,7 +831,7 @@ html, body {
 }
 #pix-amounts button[aria-pressed='true'] { background: #32bcad; transform: translateY(-2px); }
 
-#pix-dialog, #share-dialog, #tv-dialog {
+#pix-dialog, #share-dialog {
   width: min(380px, calc(100vw - 32px));
   padding: 26px 22px 22px;
   color: var(--text);
@@ -844,9 +843,9 @@ html, body {
   font-family: var(--font);
 }
 
-#pix-dialog::backdrop, #share-dialog::backdrop, #tv-dialog::backdrop { background: #000b; }
+#pix-dialog::backdrop, #share-dialog::backdrop { background: #000b; }
 
-#pix-dialog h2, #share-dialog h2, #tv-dialog h2 {
+#pix-dialog h2, #share-dialog h2 {
   margin: 0 0 14px;
   font-size: 18px;
   color: var(--gold);
@@ -893,7 +892,7 @@ html, body {
   user-select: all;
 }
 
-#pix-close, #share-close, #tv-close {
+#pix-close, #share-close {
   position: absolute;
   top: 6px;
   right: 8px;
@@ -932,22 +931,6 @@ html, body {
 .share-actions #share-whatsapp { background: #25d366; }
 .share-actions #share-x { background: #e7e7e7; }
 .share-actions [hidden] { display: none; }
-
-#tv-tips {
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-  text-align: left;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-#tv-tips li { padding: 8px 10px; border-left: 3px solid #fff2; }
-#tv-tips li + li { margin-top: 6px; }
-#tv-tips li.on { color: var(--text); background: #0006; border-left-color: var(--gold); }
-#tv-tips strong { color: var(--gold); }
-#tv-tips code { font-family: ui-monospace, monospace; color: var(--text); user-select: all; }
 
 /* ---------- Overlay para OBS (?overlay=1) ---------- */
 

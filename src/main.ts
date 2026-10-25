@@ -496,45 +496,6 @@ $('#share-native').addEventListener('click', () => {
   navigator.share({ title: 'Urna Kombat', text: shareText(), url: shareUrl }).catch(() => {});
 });
 
-// ---------- TV: Chromecast pela Presentation API, tela cheia e dicas de espelhamento ----------
-
-// AirPlay na web só existe para <video>; para a página inteira o caminho é o espelhamento do
-// sistema, então o diálogo destaca a instrução do aparelho de quem está vendo.
-const tvDialog = $<HTMLDialogElement>('#tv-dialog');
-const tvBtn = $<HTMLButtonElement>('#tv');
-const ua = navigator.userAgent;
-const os = /iPhone|iPad|Macintosh/.test(ua) && !/Chrome|Edg/.test(ua) ? 'apple'
-  : /Android/.test(ua) ? 'android'
-  : /Chrome|Edg/.test(ua) ? 'desktop'
-  : /iPhone|iPad/.test(ua) ? 'apple' : 'smarttv';
-const tips = $('#tv-tips');
-const myTip = tips.querySelector<HTMLElement>(`[data-os="${os}"]`)!;
-myTip.classList.add('on');
-tips.prepend(myTip);
-
-const castUrl = () => `${location.origin}${location.pathname}?lang=${getLang()}&sound=1`;
-// Presentation API (Chrome/Edge): ainda fora do lib.dom do TypeScript
-type PresentationRequestCtor = new (urls: string[]) => { start(): Promise<unknown> };
-const PresentationRequest = (window as unknown as { PresentationRequest?: PresentationRequestCtor }).PresentationRequest;
-const tvCast = $<HTMLButtonElement>('#tv-cast');
-tvCast.hidden = !PresentationRequest || os === 'android';
-tvCast.addEventListener('click', () => {
-  new PresentationRequest!([castUrl()]).start().then(() => tvDialog.close(), () => {});
-});
-const tvFull = $<HTMLButtonElement>('#tv-full');
-tvFull.hidden = !document.fullscreenEnabled;
-tvFull.addEventListener('click', () => {
-  tvDialog.close();
-  document.documentElement.requestFullscreen().catch(() => {});
-});
-
-tvBtn.hidden = overlay;
-tvBtn.addEventListener('click', () => tvDialog.showModal());
-$('#tv-close').addEventListener('click', () => tvDialog.close());
-tvDialog.addEventListener('click', (e) => {
-  if (e.target === tvDialog) tvDialog.close();
-});
-
 // ---------- LivePix: recados pagos, moderados pelo próprio LivePix ----------
 
 if (LIVEPIX_USER) {
@@ -564,11 +525,12 @@ function renderCredit() {
   credit.textContent = `${(location.host + location.pathname).replace(/\/$/, '')} · ${t('credit')}`;
 }
 
-if (overlay) renderCredit();
-// ?sound=1: OBS e a aba transmitida para a TV, onde ninguém vai clicar no botão de som
-if (params.get('sound') === '1') {
-  setMuted(false);
-  renderMute();
+if (overlay) {
+  renderCredit();
+  if (params.get('sound') === '1') {
+    setMuted(false);
+    renderMute();
+  }
 }
 
 // ?og: cena estática usada para gerar public/og.png (npm run og)
