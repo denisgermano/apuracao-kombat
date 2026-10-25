@@ -123,6 +123,10 @@ function renderHud(s: Snapshot) {
   $('#updated').textContent = s.time ? `TSE ${s.date} ${s.time}` : '';
 }
 
+// Fim da votação: o TSE estendeu de 17h para 19h de Brasília (22h UTC) e pausou a apuração até lá.
+const COUNT_START = Date.UTC(2026, 9, 25, 22, 0, 0);
+const paused = () => Date.now() < COUNT_START && !!prev && prev.validVotes > 0;
+
 // Hora em que chegou dado novo do TSE (não a última consulta): mostra quando a apuração "empaca".
 let lastNewData = Date.now();
 const STALE_MS = 5 * 60_000;
@@ -136,7 +140,10 @@ function setStatus(st: Status) {
   lastStatus = st;
   const el = $('#status-text');
   const stale = staleMinutes();
-  if (st.kind === 'ok' && stale) {
+  if (st.kind === 'ok' && paused()) {
+    el.textContent = t('paused');
+    el.className = 'sim';
+  } else if (st.kind === 'ok' && stale) {
     el.textContent = t('stale', { m: stale });
     el.className = 'sim';
   } else if (st.kind === 'ok') {
@@ -328,10 +335,7 @@ async function bloodyFatality(L: Fighter) {
   sfx.splat(4);
 }
 
-// Fim da votação e início da apuração: 17h de Brasília (20h UTC) de 25/10/2026.
-const COUNT_START = Date.UTC(2026, 9, 25, 20, 0, 0);
-
-/** Antes das 17h, contagem regressiva estilo arcade; depois, aguarda os primeiros votos. */
+/** Antes das 19h, contagem regressiva estilo arcade; depois, aguarda os primeiros votos. */
 function renderWaiting() {
   const ms = COUNT_START - Date.now();
   if (ms <= 0) return fx.banner(t('waitingFirst'), 'small');
@@ -525,7 +529,7 @@ copyBtn.addEventListener('click', async () => {
 const toasty = new Toasty(arena);
 let lastToasty = 0;
 
-/** Só depois que a apuração começou (17h, urnas fechadas): nada de bordão durante a votação. */
+/** Só depois que a apuração começou (urnas fechadas): nada de bordão durante a votação. */
 function easterEgg(f: Fighter) {
   const phrase = CATCHPHRASES[f.cand.number];
   if (!phrase || !prev || prev.validVotes <= 0 || params.has('og')) return;
