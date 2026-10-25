@@ -51,7 +51,7 @@ let style = readStyle();
 arena.classList.toggle('realistic', style === 'real');
 
 // ?overlay=1: fundo transparente para usar como fonte de navegador no OBS.
-// &sound=1 já começa com som (o OBS não bloqueia autoplay).
+// No overlay o som começa desligado; &sound=1 liga (o OBS não bloqueia autoplay).
 const overlay = params.has('overlay');
 document.documentElement.classList.toggle('overlay', overlay);
 const stage = $('#stage');
@@ -525,13 +525,11 @@ function renderCredit() {
   credit.textContent = `${(location.host + location.pathname).replace(/\/$/, '')} · ${t('credit')}`;
 }
 
-if (overlay) {
-  renderCredit();
-  if (params.get('sound') === '1') {
-    setMuted(false);
-    renderMute();
-  }
-}
+if (overlay) renderCredit();
+// Fora do overlay o som já vem ligado; tenta destravar agora (o Chrome deixa para quem já
+// visitou o site) e, se o navegador bloquear, destrava no primeiro toque.
+setMuted(overlay && params.get('sound') !== '1');
+renderMute();
 
 // ?og: cena estática usada para gerar public/og.png (npm run og)
 function renderOgScene() {

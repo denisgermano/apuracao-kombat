@@ -1,7 +1,7 @@
 // Efeitos sonoros sintetizados com WebAudio + locutor via speechSynthesis.
 
 let ctx: AudioContext | null = null;
-let muted = true;
+let muted = false; // som ligado por padrão; o navegador só libera no primeiro toque/tecla
 let keepAlive: HTMLAudioElement | null = null;
 
 export const isMuted = () => muted;
@@ -65,14 +65,15 @@ export function setMuted(m: boolean) {
   }
 }
 
-// O Safari suspende/interrompe o áudio quando a aba vai para segundo plano ou chega
-// uma ligação; ao voltar, o próximo toque restaura (o iOS exige gesto para isso).
+// Destrava no primeiro gesto (autoplay bloqueado) e restaura quando o Safari suspende o
+// áudio ao ir para segundo plano ou numa ligação (o iOS exige gesto para isso).
 const revive = () => {
-  if (muted || !ctx || ctx.state === 'running') return;
+  if (muted || ctx?.state === 'running') return;
   unlock();
 };
 document.addEventListener('touchend', revive, { passive: true });
 document.addEventListener('click', revive);
+document.addEventListener('keydown', revive);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !muted) void ctx?.resume();
 });
