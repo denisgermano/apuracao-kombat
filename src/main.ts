@@ -149,6 +149,9 @@ function setStatus(st: Status) {
   } else if (st.kind === 'ok') {
     el.textContent = t('live', { t: st.at.toLocaleTimeString(locale()) });
     el.className = 'live';
+  } else if (st.kind === 'busy') {
+    el.textContent = t('busy', { s: Math.round(st.retryIn / 1000) });
+    el.className = 'sim';
   } else {
     el.textContent = t('lost', { m: st.message, s: Math.round(st.retryIn / 1000) });
     el.className = 'error';

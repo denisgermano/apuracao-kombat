@@ -2,7 +2,26 @@
 
 const BASE = 'https://resultados.tse.jus.br/oficial/ele2026';
 export const ELEICAO_2T = '6258';
-const POLL_MS = 20_000;
+const POLL_MS = 30_000;
+
+// 429 do CDN do TSE: todo mundo (placar e letreiro dos estados) espera até essa hora.
+let blockedUntil = 0;
+export const throttled = () => Date.now() < blockedUntil;
+const jitter = (ms: number) => Math.round(ms * (0.8 + Math.random() * 0.4)); // espalha os visitantes no tempo
+
+export class RateLimited extends Error {
+  constructor(public wait: number) {
+    super('429');
+  }
+}
+
+/** Marca o bloqueio pedido pelo TSE (Retry-After em segundos) ou um mínimo de 60s. */
+export function rateLimited(res: Response, attempt: number): RateLimited {
+  const after = Number(res.headers.get('retry-after')) * 1000;
+  const wait = jitter(Math.min(300_000, Math.max(after || 0, 60_000 * 2 ** Math.min(attempt, 2))));
+  blockedUntil = Math.max(blockedUntil, Date.now() + wait);
+  return new RateLimited(wait);
+}
 
 export interface Candidate {
   number: string;
@@ -85,7 +104,8 @@ export function parseResult(raw: any): Snapshot {
 
 export type Status =
   | { kind: 'ok'; at: Date }
-  | { kind: 'error'; message: string; retryIn: number };
+  | { kind: 'error'; message: string; retryIn: number }
+  | { kind: 'busy'; retryIn: number };
 
 export class TseSource {
   private lastKey = '';
@@ -102,13 +122,18 @@ export class TseSource {
   }
 
   private async tick() {
-    let delay = POLL_MS;
+    let delay = jitter(POLL_MS);
+    if (throttled()) {
+      setTimeout(() => void this.tick(), blockedUntil - Date.now());
+      return;
+    }
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
       // no-cache: revalida com o CDN (etag) em vez de usar cópia velha do navegador.
       const res = await fetch(resultUrl(this.ele), { cache: 'no-cache', signal: ctrl.signal });
       clearTimeout(timer);
+      if (res.status === 429) throw rateLimited(res, this.failures);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const snap = parseResult(await res.json());
       this.failures = 0;
@@ -119,8 +144,13 @@ export class TseSource {
       }
     } catch (err) {
       this.failures++;
-      delay = Math.min(60_000, 5_000 * 2 ** (this.failures - 1));
-      this.onStatus({ kind: 'error', message: (err as Error).message, retryIn: delay });
+      if (err instanceof RateLimited) {
+        delay = err.wait;
+        this.onStatus({ kind: 'busy', retryIn: delay });
+      } else {
+        delay = jitter(Math.min(120_000, 10_000 * 2 ** (this.failures - 1)));
+        this.onStatus({ kind: 'error', message: (err as Error).message, retryIn: delay });
+      }
     }
     setTimeout(() => void this.tick(), delay);
   }
