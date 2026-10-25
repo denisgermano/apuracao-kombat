@@ -417,7 +417,11 @@ function onSnapshot(s: Snapshot) {
 const muteBtn = $<HTMLButtonElement>('#mute');
 const renderMute = () => {
   const locked = isLocked();
-  muteBtn.textContent = isMuted() ? t('soundOff') : locked ? t('soundTap') : t('soundOn');
+  const label = isMuted() ? t('soundOff') : locked ? t('soundTap') : t('soundOn');
+  muteBtn.querySelector('.ico')!.textContent = isMuted() || locked ? '🔇' : '🔊';
+  muteBtn.title = label;
+  muteBtn.setAttribute('aria-label', label);
+  muteBtn.setAttribute('aria-pressed', String(!isMuted() && !locked));
   muteBtn.classList.toggle('locked', locked);
 };
 muteBtn.addEventListener('click', () => {
@@ -427,16 +431,19 @@ muteBtn.addEventListener('click', () => {
 onAudioState(renderMute);
 renderMute();
 
-const styleBtn = $<HTMLButtonElement>('#style');
-const renderStyleBtn = () => (styleBtn.textContent = style === 'real' ? t('styleToCartoon') : t('styleToReal'));
-styleBtn.addEventListener('click', () => {
-  style = style === 'real' ? 'cartoon' : 'real';
+// Seletor de estilo com dois botões fixos (🎨/📸): o rodapé não muda de largura ao trocar.
+const styleButtons = [...document.querySelectorAll<HTMLButtonElement>('#style button')];
+const renderStyleBtn = () =>
+  styleButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === style)));
+styleButtons.forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.style === style) return;
+  style = b.dataset.style as Style;
   storage.set('style', style);
   arena.classList.toggle('realistic', style === 'real');
   fighters?.forEach((f) => f.setStyle(style));
   updateReach();
   renderStyleBtn();
-});
+}));
 renderStyleBtn();
 
 // Troca de idioma ao vivo, sem recarregar (a luta continua de onde está).
@@ -666,7 +673,6 @@ const canNotify = 'Notification' in window && !/Android/.test(navigator.userAgen
 let notifyOn = canNotify && Notification.permission === 'granted' && storage.get('notify') === '1';
 function renderNotify() {
   notifyBtn.hidden = !canNotify || Notification.permission === 'denied';
-  notifyBtn.textContent = t(notifyOn ? 'notifyOn' : 'notifyOff');
   notifyBtn.setAttribute('aria-pressed', String(notifyOn));
 }
 notifyBtn.addEventListener('click', async () => {

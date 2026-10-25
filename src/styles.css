@@ -200,8 +200,8 @@ html, body {
   right: 0;
   bottom: 0;
   display: flex;
-  gap: 16px;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 16px;
   font-size: clamp(7px, 0.85vw, 10px);
   background: #000a;
@@ -211,9 +211,9 @@ html, body {
 #status-text.live { color: #6df27f; }
 #status-text.error { color: #ff6b5e; }
 #status-text.sim { color: var(--gold); }
-#updated { color: var(--muted); flex: 1; }
+#updated { color: var(--muted); }
 
-#mute, #style, #pix, #share, #notify {
+#pix, #share, .icon-btn {
   font: inherit;
   color: var(--ink);
   background: var(--gold);
@@ -223,9 +223,9 @@ html, body {
   cursor: pointer;
 }
 
-#mute:active, #style:active, #pix:active, #share:active, #notify:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+#pix:active, #share:active, .icon-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 /* som ligado mas bloqueado pelo navegador até o primeiro toque */
-#mute.locked { background: #ff6b5e; animation: nudge 0.5s ease-in-out infinite alternate; }
+
 
 /* ---------- lutadores ---------- */
 
@@ -566,8 +566,7 @@ html, body {
   #stage { bottom: 13%; }
   .stats { line-height: 1.8; }
   .stats b { display: block; margin: 0 0 4px; }
-  #status { flex-wrap: wrap; gap: 8px; }
-  #updated { order: 3; flex-basis: 100%; }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -788,8 +787,6 @@ html, body {
 
 #share { background: #fff8e7; }
 #share[hidden], #notify[hidden] { display: none; }
-#notify { background: #fff8e7; }
-#notify[aria-pressed='true'] { background: var(--gold); }
 /* pulsa por alguns segundos nos momentos de pico (virada, FINISH HIM) */
 #share.nudge { background: var(--gold); animation: nudge 0.5s ease-in-out infinite alternate; }
 @keyframes nudge { to { transform: scale(1.12) rotate(-2deg); box-shadow: 5px 5px 0 var(--ink), 0 0 18px var(--gold); } }
@@ -983,9 +980,7 @@ html.overlay #arena.realistic .head::after { display: none; }
 /* ---------- avisos ---------- */
 
 .disclaimer { color: var(--muted); opacity: 0.8; }
-#status { flex-wrap: wrap; row-gap: 6px; }
-#status .disclaimer { order: 5; flex-basis: 100%; text-align: center; font-size: 0.9em; }
-#status #updated { flex: 1; }
+
 
 .pix-disclaimer {
   padding: 10px;
@@ -1019,9 +1014,6 @@ html.overlay #arena.realistic .head::after { display: none; }
   letter-spacing: 0.1em;
 }
 
-@media (max-width: 600px) {
-  #status .disclaimer { text-align: left; }
-}
 
 /* seletor de idioma com a mesma cara dos botões */
 #lang {
@@ -1281,3 +1273,60 @@ html.overlay #ticker { display: none !important; }
 
 html.low-fx .atmo.fog,
 html.low-fx .atmo.grain { display: none; }
+
+/* ---------- rodapé: ferramentas (ícones de tamanho fixo) à esquerda, ações à direita,
+   textos variáveis numa linha própria — trocar estilo, som ou idioma não move nada ---------- */
+
+#status .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+#status .tools, #status .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#status .actions { margin-left: auto; }
+#status .sep { width: 2px; height: 26px; background: #fff3; }
+#status .info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+#status .info .disclaimer { margin-left: auto; font-size: 0.9em; }
+#style { display: inline-flex; gap: 6px; }
+
+.icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  background: #fff8e7;
+}
+#mute .hint { font-family: var(--font); }
+.icon-btn[hidden] { display: none; }
+.icon-btn[aria-pressed='false'] { opacity: 0.6; filter: grayscale(0.6); }
+.icon-btn[aria-pressed='true'] { background: var(--gold); }
+#style .icon-btn[aria-pressed='true'] { transform: translateY(-2px); }
+
+#mute .hint { display: none; }
+#mute.locked { opacity: 1; filter: none; background: #ff6b5e; }
+/* som bloqueado até o primeiro toque: balão por cima do rodapé, sem empurrar nada */
+#mute.locked .hint {
+  display: block;
+  position: absolute;
+  left: -6px;
+  bottom: calc(100% + 10px);
+  padding: 6px 8px;
+  font-size: 8px;
+  white-space: nowrap;
+  color: #fff;
+  background: #d40000;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  animation: hint 0.6s ease-in-out infinite alternate;
+}
+#mute.locked .hint::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 100%;
+  border: 6px solid transparent;
+  border-top-color: var(--ink);
+}
+@keyframes hint { to { transform: translateY(-4px); } }
