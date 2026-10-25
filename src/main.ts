@@ -7,6 +7,7 @@ import { clock, diff, health, winner, type Attack } from './game';
 import { Gore } from './gore';
 import qrcode from 'qrcode-generator';
 import { LIVEPIX_USER, LIVEPIX_WIDGET_URL } from './config';
+import { CATCHPHRASES, Toasty } from './toasty';
 import { PIX_KEY, pixPayload } from './pix';
 import { startSim } from './sim';
 import { ELEICAO_2T, photoUrl, TseSource, type Snapshot, type Status } from './tse';
@@ -168,6 +169,10 @@ async function playAttack(ev: Attack, next: Snapshot) {
   if (ev.delta >= 0.005) {
     const p = A.headPoint(arena);
     fx.popup({ x: p.x, y: p.y - 90 }, t('gain', { d: fmtPct(ev.delta) }), 'gain');
+  }
+  if (strength >= 2 && Date.now() - lastToasty > 60_000 && Math.random() < 1 / 6) {
+    lastToasty = Date.now();
+    setTimeout(() => easterEgg(A), 450);
   }
   const hitWord = ['HIT', 'HIT!', 'BRUTAL!', 'OUTSTANDING!'][strength];
   const dp = D.headPoint(arena);
@@ -396,6 +401,42 @@ copyBtn.addEventListener('click', async () => {
     copyBtn.textContent = t('pixCopyFail');
   }
   setTimeout(() => (copyBtn.textContent = t('pixCopy')), 2500);
+});
+
+// ---------- Easter egg "Toasty!" ----------
+
+const toasty = new Toasty(arena);
+let lastToasty = 0;
+
+/** Só depois que a apuração começou (17h, urnas fechadas): nada de bordão durante a votação. */
+function easterEgg(f: Fighter) {
+  const phrase = CATCHPHRASES[f.cand.number];
+  if (!phrase || !prev || prev.validVotes <= 0 || params.has('og')) return;
+  const photo = f.el.querySelector<HTMLImageElement>('.head img')!.src;
+  if (toasty.show(f.side, photo, phrase)) sfx.shout(phrase);
+}
+
+// atalho secreto: digitar 13 ou 22
+let typed = '';
+document.addEventListener('keydown', (e) => {
+  if (!/^\d$/.test(e.key) || document.querySelector('dialog[open]')) return;
+  typed = (typed + e.key).slice(-2);
+  const f = fighters?.find((x) => x.cand.number === typed);
+  if (f) {
+    typed = '';
+    easterEgg(f);
+  }
+});
+
+// no celular: 5 toques rápidos no lutador
+stage.addEventListener('click', (e) => {
+  const f = fighters?.find((x) => x.el.contains(e.target as Node));
+  if (!f) return;
+  const now = Date.now();
+  const taps = (f.el.dataset.taps ?? '').split(',').map(Number).filter((t) => now - t < 2000);
+  taps.push(now);
+  f.el.dataset.taps = taps.length >= 5 ? '' : taps.join(',');
+  if (taps.length >= 5) easterEgg(f);
 });
 
 // ---------- Compartilhar ----------

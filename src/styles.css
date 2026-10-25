@@ -1184,3 +1184,44 @@ html.overlay #lang { display: none; }
 #livepix-alerts[hidden] { display: none; }
 
 @media (max-width: 600px) { #livepix-alerts { top: 150px; height: 180px; } }
+
+/* ---------- Easter egg "Toasty!" ---------- */
+
+.toasty {
+  position: absolute;
+  bottom: 0;
+  z-index: 11;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  animation: toasty var(--dur) ease-in-out forwards;
+}
+.toasty.left { left: 2%; }
+.toasty.right { right: 2%; flex-direction: row-reverse; }
+.toasty img {
+  width: clamp(72px, 12vw, 130px);
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: 50% 25%;
+  border: 3px solid var(--ink);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0;
+  background: #fff;
+}
+.toasty span {
+  margin-bottom: clamp(48px, 8vw, 90px);
+  padding: 8px 10px;
+  font-size: clamp(11px, 1.6vw, 18px);
+  white-space: nowrap;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+@keyframes toasty {
+  0% { transform: translateY(100%); }
+  18%, 78% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+html.overlay .toasty { bottom: 4%; }

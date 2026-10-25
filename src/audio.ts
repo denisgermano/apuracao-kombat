@@ -129,6 +129,15 @@ export const sfx = {
     noise(1.2, 200, 0.9, 60);
     tone(90, 1, 0.8, 'square', 30);
   },
+  /** Grito agudo do easter egg (como o "Toasty!" do MK2): voz sintética, nunca imitando o candidato. */
+  shout(text: string) {
+    if (muted || !('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'pt-BR';
+    u.pitch = 2;
+    u.rate = 1.15;
+    speechSynthesis.speak(u);
+  },
   say(text: string) {
     if (muted || !('speechSynthesis' in window)) return;
     const u = new SpeechSynthesisUtterance(text);
