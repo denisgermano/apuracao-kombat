@@ -1,0 +1,6 @@
+# Proxy com cache do JSON público do TSE (evita 429 do CDN do TSE no Safari/iCloud Private Relay).
+name = "urnakombat-tse"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = false
+routes = [{ pattern = "tse.urnakombat.com.br", custom_domain = true }]

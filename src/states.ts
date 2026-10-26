@@ -1,9 +1,9 @@
 // Placar por estado (arquivos por UF do TSE), para o letreiro embaixo da arena.
 
-import { parseResult, rateLimited, resultUrl, throttled, type Snapshot } from './tse';
+import { fetchResult, parseResult, rateLimited, throttled, type Snapshot } from './tse';
 
 const UFS = 'sp mg rj ba pr rs pe ce pa sc go ma am es pb mt rn pi al df ms se ro to ac ap rr zz'.split(' ');
-const POLL_MS = 5 * 60_000; // 28 arquivos (~9 KB cada); no-cache revalida e quase sempre vira 304
+const POLL_MS = 5 * 60_000; // 28 arquivos (~9 KB cada), via proxy com cache de borda
 
 export type StateRow = { uf: string; s: Snapshot };
 
@@ -25,7 +25,7 @@ export class StatesSource {
       const worker = async () => {
         for (let uf; (uf = queue.shift()) && !throttled(); ) {
           try {
-            const res = await fetch(resultUrl(this.ele, uf), { cache: 'no-cache' });
+            const res = await fetchResult(this.ele, uf);
             if (res.status === 429) rateLimited(res, 1); // o placar principal tem prioridade
             else if (res.ok) this.rows.set(uf, parseResult(await res.json()));
           } catch {

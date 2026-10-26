@@ -1,6 +1,11 @@
 // Leitura da apuração oficial do TSE (arquivos JSON estáticos no CDN, CORS liberado).
+// Os dados passam pelo proxy (Cloudflare Worker com cache de borda): o CDN do TSE devolve 429
+// para IPs compartilhados (iCloud Private Relay). Fotos vão direto ao TSE.
 
 const BASE = 'https://resultados.tse.jus.br/oficial/ele2026';
+const PROXY = 'https://tse.urnakombat.com.br/oficial/ele2026';
+const PROXY_MAX_FAILS = 3;
+const DIRECT_MS = 10 * 60_000; // depois de 3 falhas seguidas do proxy, 10 min direto no TSE
 export const ELEICAO_2T = '6258';
 const POLL_MS = 30_000;
 
@@ -48,12 +53,63 @@ export interface Snapshot {
   candidates: [Candidate, Candidate]; // ordenados pelo número (13 à esquerda, 22 à direita), fixos a noite toda
 }
 
-export const resultUrl = (ele: string, uf = 'br') =>
-  `${BASE}/${ele}/dados/${uf}/${uf}-c0001-e${ele.padStart(6, '0')}-u.json`;
+/** Base do proxy: VITE_TSE_PROXY sobrescreve; string vazia desliga (vai direto ao TSE). */
+export function proxyBase(): string {
+  const env = import.meta.env.VITE_TSE_PROXY;
+  return (env ?? PROXY).replace(/\/+$/, '');
+}
+
+export const resultUrl = (ele: string, uf = 'br', base = proxyBase() || BASE) =>
+  `${base}/${ele}/dados/${uf}/${uf}-c0001-e${ele.padStart(6, '0')}-u.json`;
+
+let proxyFails = 0;
+let directUntil = 0;
+
+/** Zera o estado do proxy (testes). */
+export function resetProxy() {
+  proxyFails = 0;
+  directUntil = 0;
+}
+
+/**
+ * Busca um arquivo de resultado: proxy primeiro; se o próprio proxy cair (rede/CORS, 5xx dele, rota
+ * recusada), repete direto no TSE. Respostas do TSE repassadas pelo proxy (X-Proxy-Error: upstream,
+ * ex.: 404 de arquivo ainda não publicado, 502/503 sem cópia velha) e 429 voltam como estão: quem chama
+ * faz o backoff, sem levar todo mundo de volta ao CDN do TSE.
+ */
+export async function fetchResult(ele: string, uf = 'br', signal?: AbortSignal): Promise<Response> {
+  const base = proxyBase();
+  if (base && Date.now() >= directUntil) {
+    try {
+      // cache padrão: a borda já revalida e o max-age=10 do proxy basta
+      const res = await fetch(resultUrl(ele, uf, base), { signal });
+      const kind = res.headers.get('X-Proxy-Error');
+      if (kind === 'upstream' || (res.status < 500 && !(res.status === 404 && kind === 'route'))) {
+        if (res.ok) proxyFails = 0;
+        return res;
+      }
+    } catch (err) {
+      if (signal?.aborted) {
+        proxyFailed();
+        throw err;
+      }
+    }
+    proxyFailed();
+  }
+  // no-cache: revalida com o CDN (etag) em vez de usar cópia velha do navegador.
+  return fetch(resultUrl(ele, uf, BASE), { cache: 'no-cache', signal });
+}
+
+function proxyFailed() {
+  if (++proxyFails >= PROXY_MAX_FAILS) {
+    proxyFails = 0;
+    directUntil = Date.now() + DIRECT_MS;
+  }
+}
 
 /** Uma leitura só (replay ilustrativo parte do resultado mais recente). */
 export async function fetchOnce(ele: string): Promise<Snapshot> {
-  const res = await fetch(resultUrl(ele), { cache: 'no-cache' });
+  const res = await fetchResult(ele);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return parseResult(await res.json());
 }
@@ -133,8 +189,7 @@ export class TseSource {
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
-      // no-cache: revalida com o CDN (etag) em vez de usar cópia velha do navegador.
-      const res = await fetch(resultUrl(this.ele), { cache: 'no-cache', signal: ctrl.signal });
+      const res = await fetchResult(this.ele, 'br', ctrl.signal);
       clearTimeout(timer);
       if (res.status === 429) throw rateLimited(res, this.failures);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
