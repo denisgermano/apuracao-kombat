@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Análise 2º turno · Urna Kombat</title>
+    <meta name="description" content="Presidente 2026, 1º x 2º turno: votos de Lula e Flávio por estado e município, efeito da extensão do horário (censo de todos os logs de urna) e estimativa de transferência de votos. Dados oficiais do TSE." />
+    <meta property="og:title" content="Análise do 2º turno · Urna Kombat" />
+    <meta property="og:description" content="Lula x Flávio, 1º x 2º turno: estados, municípios, horário de votação e transferência de votos, com dados oficiais do TSE." />
+    <meta property="og:image" content="https://urnakombat.com.br/og.png" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="../">URNA KOMBAT</a>
+      <h1>Presidente 2026: o que mudou do 1º para o 2º turno</h1>
+      <p class="lead">Dados oficiais do TSE: totais por estado e pelos 5.757 municípios, e os logs de <strong>todas as 499.248 urnas</strong> do 2º turno. Escolha um estado para filtrar a página inteira.</p>
+    </header>
+
+    <nav class="filters" aria-label="Filtros">
+      <label>Abrangência
+        <select id="uf"></select>
+      </label>
+      <div class="jump" role="list">
+        <a href="#votos">Votos</a><a href="#horario">Horário</a><a href="#transferencia">Transferência</a><a href="#municipios">Municípios</a>
+      </div>
+    </nav>
+
+    <main id="app" aria-busy="true">
+      <p class="loading">Carregando dados…</p>
+
+      <section id="tiles" class="tiles" aria-live="polite"></section>
+
+      <section id="votos" class="card">
+        <div class="card-head">
+          <div>
+            <h2>Variação de votos por estado</h2>
+            <p class="sub">Ganho de cada candidato do 1º para o 2º turno. Clique num estado para filtrar.</p>
+          </div>
+          <div class="seg" role="group" aria-label="Métrica" id="var-metric">
+            <button type="button" data-v="pct" aria-pressed="true">Variação %</button>
+            <button type="button" data-v="abs" aria-pressed="false">Votos</button>
+            <button type="button" data-v="pv" aria-pressed="false">% dos válidos (Lula)</button>
+          </div>
+        </div>
+        <div class="legend" id="var-legend"></div>
+        <div id="var-chart" class="chart"></div>
+      </section>
+
+      <section id="horario" class="card">
+        <div class="card-head">
+          <div>
+            <h2>A extensão até as 19h mudou algo?</h2>
+            <p class="sub" id="ext-sub"></p>
+          </div>
+        </div>
+        <div id="ext-headline" class="headline"></div>
+        <h3>Votos por hora (% do total do turno)</h3>
+        <div class="legend" id="hora-legend"></div>
+        <div id="hora-chart" class="chart"></div>
+        <div class="card-head minor">
+          <h3>Fim de tarde, de 10 em 10 minutos (16h–20h)</h3>
+          <label class="check"><input type="checkbox" id="log-scale" checked /> escala logarítmica</label>
+        </div>
+        <div id="tarde-chart" class="chart"></div>
+        <div class="table-wrap"><table id="ext-table" class="data"></table></div>
+        <p class="note">Hora de Brasília, convertida pelo horário de abertura de cada urna (8h de Brasília). No exterior vale a hora local. Quem estava na fila às 17h podia votar depois, por isso há votos entre 17h e 17h30 nos dois turnos.</p>
+      </section>
+
+      <section id="transferencia" class="card">
+        <div class="card-head">
+          <div>
+            <h2>De onde vieram os votos do 2º turno</h2>
+            <p class="sub" id="tr-sub"></p>
+          </div>
+        </div>
+        <div class="legend" id="tr-legend"></div>
+        <div id="tr-chart" class="chart"></div>
+        <div id="tr-summary" class="headline small"></div>
+        <p class="note">Estimativa por inferência ecológica (regressão de Goodman com restrições, município a município). O voto é secreto: dados agregados mostram bem o saldo, mas não quantos eleitores trocaram de lado em cada direção. Para o Brasil, as barras mostram a faixa entre três versões do modelo (por UF, por decil de força de Lula e por UF × tercil); para um estado, o valor da versão UF × tercil, mais incerta.</p>
+      </section>
+
+      <section id="municipios" class="card">
+        <div class="card-head">
+          <div>
+            <h2>Municípios</h2>
+            <p class="sub" id="mun-sub"></p>
+          </div>
+          <input id="mun-search" type="search" placeholder="Buscar município…" aria-label="Buscar município" />
+        </div>
+        <div class="table-wrap"><table id="mun-table" class="data sortable"></table></div>
+        <button id="mun-more" type="button" class="more" hidden>Mostrar mais</button>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Fonte: TSE (resultados.tse.jus.br e logs públicos das urnas), baixados em 26/10/2026. Análise independente e apartidária, sem vínculo com candidatos ou partidos.</p>
+      <p><a href="../">‹ Voltar para a luta</a> · <a href="./dados.json" download>Baixar os dados (JSON)</a></p>
+    </footer>
+
+    <div id="tip" class="tip" role="tooltip" hidden></div>
+    <script type="module" src="/src/analise/main.ts"></script>
+  </body>
+</html>

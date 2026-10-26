@@ -1275,6 +1275,8 @@ html.overlay #ticker { display: none !important; }
 
 #back-live { color: var(--gold); text-decoration: none; }
 #back-live[hidden] { display: none; }
+#analysis-link { color: var(--gold); text-decoration: none; }
+#analysis-link:hover, #analysis-link:focus-visible { text-decoration: underline; }
 
 html.low-fx .atmo.fog,
 html.low-fx .atmo.grain { display: none; }
