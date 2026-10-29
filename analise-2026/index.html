@@ -16,34 +16,39 @@
   <body>
     <header class="top">
       <a class="brand" href="../">URNA KOMBAT</a>
-      <h1>Presidente 2026: o que mudou do 1º para o 2º turno</h1>
-      <p class="lead">Dados oficiais do TSE: totais por estado e pelos 5.757 municípios, e os logs de <strong>todas as 499.248 urnas</strong> do 2º turno. Escolha um estado para filtrar a página inteira.</p>
+      <h1 data-a="h1">Presidente 2026: o que mudou do 1º para o 2º turno</h1>
+      <p class="lead" data-a-html="lead">Dados oficiais do TSE: totais por estado e pelos 5.757 municípios, e os logs de <strong>todas as 499.248 urnas</strong> do 2º turno. Escolha um estado para filtrar a página inteira.</p>
     </header>
 
-    <nav class="filters" aria-label="Filtros">
-      <label>Abrangência
+    <nav class="filters" aria-label="Filtros" data-a-aria="filters">
+      <label><span data-a="scope">Abrangência</span>
         <select id="uf"></select>
       </label>
       <div class="jump" role="list">
-        <a href="#votos">Votos</a><a href="#horario">Horário</a><a href="#transferencia">Transferência</a><a href="#municipios">Municípios</a>
+        <a href="#votos" data-a="jumpVotes">Votos</a><a href="#horario" data-a="jumpHours">Horário</a><a href="#transferencia" data-a="jumpTransfer">Transferência</a><a href="#municipios" data-a="jumpMun">Municípios</a><a href="#auditoria" data-a="jumpAudit">Auditoria</a>
+      </div>
+      <div class="seg lang" role="group" id="lang" aria-label="Idioma" data-a-aria="langLabel">
+        <button type="button" data-lang="pt" lang="pt-BR" aria-pressed="true">PT</button>
+        <button type="button" data-lang="en" lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="es" lang="es" aria-pressed="false">ES</button>
       </div>
     </nav>
 
     <main id="app" aria-busy="true">
-      <p class="loading">Carregando dados…</p>
+      <p class="loading" data-a="loading">Carregando dados…</p>
 
       <section id="tiles" class="tiles" aria-live="polite"></section>
 
       <section id="votos" class="card">
         <div class="card-head">
           <div>
-            <h2>Variação de votos por estado</h2>
-            <p class="sub">Ganho de cada candidato do 1º para o 2º turno. Clique num estado para filtrar.</p>
+            <h2 data-a="varTitle">Variação de votos por estado</h2>
+            <p class="sub" data-a="varSub">Ganho de cada candidato do 1º para o 2º turno. Clique num estado para filtrar.</p>
           </div>
-          <div class="seg" role="group" aria-label="Métrica" id="var-metric">
-            <button type="button" data-v="pct" aria-pressed="true">Variação %</button>
-            <button type="button" data-v="abs" aria-pressed="false">Votos</button>
-            <button type="button" data-v="pv" aria-pressed="false">% dos válidos (Lula)</button>
+          <div class="seg" role="group" aria-label="Métrica" data-a-aria="metric" id="var-metric">
+            <button type="button" data-v="pct" aria-pressed="true" data-a="mPct">Variação %</button>
+            <button type="button" data-v="abs" aria-pressed="false" data-a="mAbs">Votos</button>
+            <button type="button" data-v="pv" aria-pressed="false" data-a="mPv">% dos válidos (Lula)</button>
           </div>
         </div>
         <div class="legend" id="var-legend"></div>
@@ -53,52 +58,77 @@
       <section id="horario" class="card">
         <div class="card-head">
           <div>
-            <h2>A extensão até as 19h mudou algo?</h2>
+            <h2 data-a="extTitle">A extensão até as 19h mudou algo?</h2>
             <p class="sub" id="ext-sub"></p>
           </div>
         </div>
         <div id="ext-headline" class="headline"></div>
-        <h3>Votos por hora (% do total do turno)</h3>
+        <h3 data-a="hourTitle">Votos por hora (% do total do turno)</h3>
         <div class="legend" id="hora-legend"></div>
         <div id="hora-chart" class="chart"></div>
         <div class="card-head minor">
-          <h3>Fim de tarde, de 10 em 10 minutos (16h–20h)</h3>
-          <label class="check"><input type="checkbox" id="log-scale" checked /> escala logarítmica</label>
+          <h3 data-a="lateTitle">Fim de tarde, de 10 em 10 minutos (16h–20h)</h3>
+          <label class="check"><input type="checkbox" id="log-scale" checked /> <span data-a="logScale">escala logarítmica</span></label>
         </div>
         <div id="tarde-chart" class="chart"></div>
         <div class="table-wrap"><table id="ext-table" class="data"></table></div>
-        <p class="note">Hora de Brasília, convertida pelo horário de abertura de cada urna (8h de Brasília). No exterior vale a hora local. Quem estava na fila às 17h podia votar depois, por isso há votos entre 17h e 17h30 nos dois turnos.</p>
+        <p class="note" data-a="extNote">Hora de Brasília, convertida pelo fuso de cada município. No exterior vale a hora local. Quem estava na fila às 17h podia votar depois, por isso há votos entre 17h e 17h30 nos dois turnos.</p>
       </section>
 
       <section id="transferencia" class="card">
         <div class="card-head">
           <div>
-            <h2>De onde vieram os votos do 2º turno</h2>
+            <h2 data-a="trTitle">De onde vieram os votos do 2º turno</h2>
             <p class="sub" id="tr-sub"></p>
           </div>
         </div>
         <div class="legend" id="tr-legend"></div>
         <div id="tr-chart" class="chart"></div>
         <div id="tr-summary" class="headline small"></div>
-        <p class="note">Estimativa por inferência ecológica (regressão de Goodman com restrições, município a município). O voto é secreto: dados agregados mostram bem o saldo, mas não quantos eleitores trocaram de lado em cada direção. Para o Brasil, as barras mostram a faixa entre três versões do modelo (por UF, por decil de força de Lula e por UF × tercil); para um estado, o valor da versão UF × tercil, mais incerta.</p>
+        <p class="note" data-a="trNote">Estimativa por inferência ecológica (regressão de Goodman com restrições, município a município). O voto é secreto: dados agregados mostram bem o saldo, mas não quantos eleitores trocaram de lado em cada direção. Para o Brasil, as barras mostram a faixa entre três versões do modelo (por UF, por decil de força de Lula e por UF × tercil); para um estado, o valor da versão UF × tercil, mais incerta.</p>
       </section>
 
       <section id="municipios" class="card">
         <div class="card-head">
           <div>
-            <h2>Municípios</h2>
+            <h2 data-a="munTitle">Municípios</h2>
             <p class="sub" id="mun-sub"></p>
           </div>
-          <input id="mun-search" type="search" placeholder="Buscar município…" aria-label="Buscar município" />
+          <input id="mun-search" type="search" placeholder="Buscar município…" aria-label="Buscar município" data-a-ph="munSearch" data-a-aria="munSearch" />
         </div>
         <div class="table-wrap"><table id="mun-table" class="data sortable"></table></div>
         <button id="mun-more" type="button" class="more" hidden>Mostrar mais</button>
       </section>
+
+      <section id="auditoria" class="card">
+        <div class="card-head">
+          <div>
+            <h2 data-a="audTitle">Auditoria: há sinais de fraude?</h2>
+            <p class="sub" data-a="audSub">Testes sobre os arquivos públicos de todas as urnas: boletins, registro de cada voto, logs e assinaturas digitais.</p>
+          </div>
+        </div>
+        <div id="aud-headline" class="headline"></div>
+        <div class="table-wrap"><table id="aud-table" class="data checks"></table></div>
+        <div class="card-head minor">
+          <div>
+            <h3 data-a="flagTitle">Seções fora do padrão, comparadas com o 1º turno</h3>
+            <p class="sub" id="flag-sub"></p>
+          </div>
+          <div class="seg" role="group" aria-label="Tipo" data-a-aria="flagType" id="flag-type">
+            <button type="button" data-v="zero" aria-pressed="true" data-a="fZero">Zero votos</button>
+            <button type="button" data-v="comp" aria-pressed="false" data-a="fComp">Comparecimento alto</button>
+            <button type="button" data-v="zona" aria-pressed="false" data-a="fZona">Fora da zona</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="flag-table" class="data"></table></div>
+        <button id="flag-more" type="button" class="more" hidden></button>
+        <p class="note" data-a-html="audNote"></p>
+      </section>
     </main>
 
     <footer class="foot">
-      <p>Fonte: TSE (resultados.tse.jus.br e logs públicos das urnas), baixados em 26/10/2026. Análise independente e apartidária, sem vínculo com candidatos ou partidos.</p>
-      <p><a href="../">‹ Voltar para a luta</a> · <a href="./dados.json" download>Baixar os dados (JSON)</a></p>
+      <p data-a="foot">Fonte: TSE (resultados.tse.jus.br e logs públicos das urnas), baixados em 26/10/2026. Análise independente e apartidária, sem vínculo com candidatos ou partidos.</p>
+      <p><a href="../" data-a="back">‹ Voltar para a luta</a> · <a href="./dados.json" download data-a="download">Baixar os dados (JSON)</a> · <a href="./auditoria.json" download data-a="downloadAudit">Baixar a auditoria (JSON)</a></p>
     </footer>
 
     <div id="tip" class="tip" role="tooltip" hidden></div>

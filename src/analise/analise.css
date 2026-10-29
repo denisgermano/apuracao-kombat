@@ -106,6 +106,8 @@ select { min-width: 150px; }
 .jump { display: flex; gap: 14px; font-size: 14px; }
 .jump a { color: var(--ink-2); text-decoration: none; }
 .jump a:hover { color: var(--ink); text-decoration: underline; }
+.seg.lang { margin-left: auto; }
+.seg.lang button { padding: 5px 9px; }
 
 main { padding-top: 20px; padding-bottom: 20px; }
 .loading { color: var(--muted); }
@@ -200,3 +202,10 @@ table.data tbody tr:hover { background: var(--wash); }
   .tile .v { font-size: 22px; }
   .jump { display: none; }
 }
+
+table.checks td { white-space: normal; text-align: left; vertical-align: top; }
+table.checks td:nth-child(2) { width: 26%; font-weight: 600; }
+table.checks td.st { width: 1.5em; padding-right: 0; font-weight: 700; }
+.st.ok { color: var(--up); }
+.st.info { color: var(--accent); }
+table.data td .sub2 { display: block; color: var(--muted); font-size: 12px; }

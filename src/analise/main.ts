@@ -1,5 +1,7 @@
 // Página de análise do 1º x 2º turno: lê dados.json (gerado por analise/exportar_web.py) e desenha tudo em SVG.
 import './analise.css';
+import { LANGS, detectLang, type Lang } from '../i18n';
+import { type AKey, aLang, applyAStatic, at, inUf, setALang } from './i18n';
 
 type T1 = { Lula: number; Flávio: number; Outros: number; BN: number; Abst: number; Eleit: number };
 type T2 = { Lula: number; Flávio: number; BN: number; Abst: number; Eleit: number };
@@ -21,35 +23,58 @@ type Dados = {
   fluxos: Record<string, Record<string, number>>;
 };
 
-const UF_NOMES: Record<string, string> = {
+type Digito = { p: number };
+type Auditoria = {
+  logs: Record<string, number>;
+  bu: Record<string, number> & { soma_sa: Record<string, number> };
+  oficial: Record<'13' | '22', number>;
+  assinaturas: Record<string, number>;
+  municipios: Record<string, number>;
+  secoes: { n: number; zeros: { lula: number; flavio: number }; fora_da_zona: number; comparecimento_100: number; klimek: number; ultimo_digito: { lula: Digito; flavio: Digito } };
+  sinalizadas: [string, string, string, number, number, number, number, number, number, number | null, number | null, number | null, number | null, number | null][];
+  sinalizadas_resumo: Record<'zero' | 'zona' | 'comp', { mediana_dif_pp: number; max_dif_pp: number }>;
+};
+
+const UF_PT: Record<string, string> = {
   AC: 'Acre', AL: 'Alagoas', AM: 'Amazonas', AP: 'Amapá', BA: 'Bahia', CE: 'Ceará', DF: 'Distrito Federal',
   ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão', MG: 'Minas Gerais', MS: 'Mato Grosso do Sul', MT: 'Mato Grosso',
   PA: 'Pará', PB: 'Paraíba', PE: 'Pernambuco', PI: 'Piauí', PR: 'Paraná', RJ: 'Rio de Janeiro', RN: 'Rio Grande do Norte',
   RO: 'Rondônia', RR: 'Roraima', RS: 'Rio Grande do Sul', SC: 'Santa Catarina', SE: 'Sergipe', SP: 'São Paulo',
-  TO: 'Tocantins', Exterior: 'Exterior',
+  TO: 'Tocantins',
 };
+const ufNome = (k: string) => (k === 'Exterior' ? at('abroad') : k === 'DF' && aLang() === 'en' ? 'Federal District' : UF_PT[k] ?? k);
+const ufCurto = (k: string) => (k === 'Exterior' ? at('abroadShort') : k);
 const BR = 'BR';
 
 const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector(s) as T;
 const SVG = 'http://www.w3.org/2000/svg';
 
-// ---------- formatação ----------
-const nf = new Intl.NumberFormat('pt-BR');
-const fmt = (n: number) => nf.format(Math.round(n));
-const signed = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n));
-const pct = (x: number, d = 1) => (x * 100).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%';
-const spct = (x: number, d = 1) => (x > 0 ? '+' : x < 0 ? '−' : '') + pct(Math.abs(x), d);
-const pp = (x: number, d = 1) => (x > 0 ? '+' : x < 0 ? '−' : '') + (Math.abs(x) * 100).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' p.p.';
-const mi = (n: number, d = 2) => (n / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' mi';
+// ---------- formatação (locale do idioma escolhido) ----------
+const LOC: Record<Lang, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
+const loc = () => LOC[aLang()];
+const num = (n: number, o: Intl.NumberFormatOptions = {}) => n.toLocaleString(loc(), { useGrouping: true, ...o });
+const fmt = (n: number) => num(Math.round(n));
+const sign = (x: number) => (x > 0 ? '+' : x < 0 ? '−' : '');
+const signed = (n: number) => sign(n) + fmt(Math.abs(n));
+const dec = (x: number, d: number) => num(x, { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (x: number, d = 1) => dec(x * 100, d) + '%';
+const spct = (x: number, d = 1) => sign(x) + pct(Math.abs(x), d);
+const pp = (x: number, d = 1) => `${sign(x)}${dec(Math.abs(x) * 100, d)} ${at('unitPP')}`;
+const mi = (n: number, d = 2) => `${dec(n / 1e6, d)} ${at('unitM')}`;
 const curto = (n: number) => {
   const a = Math.abs(n);
-  if (a >= 1e6) return (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi';
-  if (a >= 1e3) return (n / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' mil';
+  if (a >= 1e6) return `${num(n / 1e6, { maximumFractionDigits: 1 })} ${at('unitM')}`;
+  if (a >= 1e3) return `${num(n / 1e3, { maximumFractionDigits: 0 })} ${at('unitK')}`;
   return fmt(n);
 };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const cls = (x: number) => (x > 0 ? 'up' : x < 0 ? 'down' : '');
-const hh = (min: number) => `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+const hh = (min: number) => {
+  const h = Math.floor(min / 60);
+  const m = String(min % 60).padStart(2, '0');
+  return aLang() === 'pt' ? `${h}h${m}` : `${h}:${m}`;
+};
+const plural = (n: number, um: AKey, varios: AKey) => at(n === 1 ? um : varios);
 
 // ---------- derivados ----------
 const comp = (t: { Eleit: number; Abst: number }) => t.Eleit - t.Abst;
@@ -228,14 +253,11 @@ let uf = new URLSearchParams(location.search).get('uf') ?? BR;
 let metrica: 'pct' | 'abs' | 'pv' = 'pct';
 let logScale = true;
 const area = () => (uf === BR ? D.br : D.uf[uf]);
-const nomeArea = () => (uf === BR ? 'Brasil' : UF_NOMES[uf] ?? uf);
-// preposição de cada UF: "no Rio de Janeiro", "na Bahia", "em São Paulo"
-const NO = new Set(['AC', 'AM', 'AP', 'CE', 'DF', 'ES', 'MA', 'PA', 'PI', 'PR', 'RJ', 'RN', 'RS', 'TO']);
-const NA = new Set(['BA', 'PB']);
+const nomeArea = () => (uf === BR ? at('brazil') : ufNome(uf));
 const naArea = () => {
-  if (uf === BR) return 'no Brasil';
-  if (uf === 'Exterior') return 'no exterior';
-  return `${NO.has(uf) ? 'no' : NA.has(uf) ? 'na' : 'em'} ${UF_NOMES[uf] ?? uf}`;
+  if (uf === BR) return at('inBrazil');
+  if (uf === 'Exterior') return at('inAbroad');
+  return inUf(uf, ufNome(uf));
 };
 
 function setUf(k: string) {
@@ -246,6 +268,7 @@ function setUf(k: string) {
   else q.set('uf', uf);
   history.replaceState(null, '', `${location.pathname}${q.size ? '?' + q : ''}${location.hash}`);
   munLimite = 50;
+  flagLimite = 30;
   render();
 }
 
@@ -255,19 +278,22 @@ function tiles() {
   const { t1, t2 } = a;
   const c = (k: Cand, sw: string) => {
     const d = t2[k] - t1[k];
-    return `<div class="tile"><div class="k"><i class="sw ${sw}"></i>${k === 'Lula' ? 'Lula (13)' : 'Flávio (22)'} no 2º turno</div>
+    return `<div class="tile"><div class="k"><i class="sw ${sw}"></i>${at('tileCand', { c: k === 'Lula' ? 'Lula (13)' : 'Flávio (22)' })}</div>
       <div class="v">${fmt(t2[k])}</div>
-      <div class="d"><span class="${cls(d)}">${signed(d)} (${spct(varPct(t1[k], t2[k]))})</span> vs 1º turno<br>${pct(t1[k] / val1(t1))} → <strong>${pct(t2[k] / val2(t2))}</strong> dos válidos</div></div>`;
+      <div class="d"><span class="${cls(d)}">${signed(d)} (${spct(varPct(t1[k], t2[k]))})</span> ${at('vsT1')}<br>${pct(t1[k] / val1(t1))} → <strong>${pct(t2[k] / val2(t2))}</strong> ${at('ofValid')}</div></div>`;
   };
   const c1 = comp(t1) / t1.Eleit;
   const c2 = comp(t2) / t2.Eleit;
   const s = a.secoes;
   $('#tiles').innerHTML = c('Lula', 'lula') + c('Flávio', 'flavio') +
-    `<div class="tile"><div class="k">Comparecimento</div><div class="v">${pct(c2)}</div>
-      <div class="d">1º turno: ${pct(c1)} · <span class="${cls(c2 - c1)}">${pp(c2 - c1)}</span><br>${signed(comp(t2) - comp(t1))} eleitores</div></div>` +
-    `<div class="tile"><div class="k">Votos depois das 18h (2º turno)</div><div class="v">${fmt(s.t2.v18)}</div>
-      <div class="d">1º turno: ${fmt(s.t1.v18)}<br>Depois das 17h: ${fmt(s.t2.v17)} (2º) vs ${fmt(s.t1.v17)} (1º)</div></div>`;
+    `<div class="tile"><div class="k">${at('turnout')}</div><div class="v">${pct(c2)}</div>
+      <div class="d">${at('t1')}: ${pct(c1)} · <span class="${cls(c2 - c1)}">${pp(c2 - c1)}</span><br>${at('voters', { n: signed(comp(t2) - comp(t1)) })}</div></div>` +
+    `<div class="tile"><div class="k">${at('after18Tile')}</div><div class="v">${fmt(s.t2.v18)}</div>
+      <div class="d">${at('t1')}: ${fmt(s.t1.v18)}<br>${at('after17Line', { a: fmt(s.t2.v17), b: fmt(s.t1.v17) })}</div></div>`;
 }
+
+const legendaTurnos = (extra = '') =>
+  `<span><i class="sw t1"></i>${at('legendT1')}</span><span><i class="sw t2"></i>${at('legendT2')}</span>${extra}`;
 
 function variacao() {
   const ufs = Object.keys(D.uf);
@@ -277,18 +303,18 @@ function variacao() {
     const { t1, t2 } = D.uf[k];
     const linha = (c: Cand, sw: string) =>
       tipRow(sw, c, `${fmt(t1[c])} → ${fmt(t2[c])} (${spct(varPct(t1[c], t2[c]))})`);
-    return `<b>${esc(UF_NOMES[k] ?? k)}</b>${linha('Lula', 'lula')}${linha('Flávio', 'flavio')}` +
-      tipRow('', 'Lula % válidos', `${pct(t1.Lula / val1(t1))} → ${pct(t2.Lula / val2(t2))}`) +
-      tipRow('', 'Comparecimento', `${pct(comp(t1) / t1.Eleit)} → ${pct(comp(t2) / t2.Eleit)}`);
+    return `<b>${esc(ufNome(k))}</b>${linha('Lula', 'lula')}${linha('Flávio', 'flavio')}` +
+      tipRow('', at('tipValid'), `${pct(t1.Lula / val1(t1))} → ${pct(t2.Lula / val2(t2))}`) +
+      tipRow('', at('turnout'), `${pct(comp(t1) / t1.Eleit)} → ${pct(comp(t2) / t2.Eleit)}`);
   };
   let rows: HRow[];
   if (metrica === 'pv') {
-    legend.innerHTML = '<span><i class="sw t1"></i>1º turno</span><span><i class="sw t2"></i>2º turno</span><span>linha tracejada: 50%</span>';
+    legend.innerHTML = legendaTurnos(`<span>${at('line50')}</span>`);
     rows = ufs.map((k) => {
       const { t1, t2 } = D.uf[k];
-      return { key: k, label: k === 'Exterior' ? 'Ext.' : k, vals: [t1.Lula / val1(t1), t2.Lula / val2(t2)], tip: tipUf(k), sel: k === uf };
+      return { key: k, label: ufCurto(k), vals: [t1.Lula / val1(t1), t2.Lula / val2(t2)], tip: tipUf(k), sel: k === uf };
     }).sort((a, b) => (b.vals[1] as number) - (a.vals[1] as number));
-    hbars(host, rows, [{ cls: 't1', nome: '1º' }, { cls: 't2', nome: '2º' }], (v) => pct(v, 0),
+    hbars(host, rows, [{ cls: 't1', nome: at('t1') }, { cls: 't2', nome: at('t2') }], (v) => pct(v, 0),
       { ref: { v: 0.5, label: '50%' }, onClick: setUf });
     return;
   }
@@ -298,61 +324,63 @@ function variacao() {
     : (a: number, b: number) => b - a;
   rows = ufs.map((k) => {
     const { t1, t2 } = D.uf[k];
-    return { key: k, label: k === 'Exterior' ? 'Ext.' : k, vals: [f(t1.Lula, t2.Lula), f(t1.Flávio, t2.Flávio)], tip: tipUf(k), sel: k === uf };
+    return { key: k, label: ufCurto(k), vals: [f(t1.Lula, t2.Lula), f(t1.Flávio, t2.Flávio)], tip: tipUf(k), sel: k === uf };
   }).sort((a, b) => (b.vals[0] as number) - (a.vals[0] as number));
   hbars(host, rows, [{ cls: 'lula', nome: 'Lula' }, { cls: 'flavio', nome: 'Flávio' }],
-    metrica === 'pct' ? (v) => pct(v, 0) : curto, { onClick: setUf });
+    metrica === 'pct' ? (v) => pct(v, 0) : curto, { onClick: setUf, labelW: aLang() === 'en' ? 72 : 64 });
 }
 
 function horario() {
   const a = area();
   const s = a.secoes;
   const margem = Math.abs(a.t2.Lula - a.t2.Flávio);
-  $('#ext-sub').textContent = `Censo dos logs de ${fmt(s.t2.secoes)} urnas ${naArea()} no 2º turno, com ${fmt(s.t2.votos)} votos registrados.`;
+  $('#ext-sub').textContent = at('extSub', { n: fmt(s.t2.secoes), area: naArea(), v: fmt(s.t2.votos) });
   $('#ext-headline').innerHTML = s.t2.v18 === 0
-    ? `${nomeArea()}: <strong>nenhum voto</strong> registrado depois das 18h no 2º turno (no 1º turno foram ${fmt(s.t1.v18)}).`
-    : `${nomeArea()}: <strong>${fmt(s.t2.v18)} voto${s.t2.v18 > 1 ? 's' : ''}</strong> depois das 18h no 2º turno (${pct(s.t2.v18 / s.t2.votos, 3)}), em ${fmt(s.t2.s18)} seç${s.t2.s18 > 1 ? 'ões' : 'ão'}. No 1º turno foram ${fmt(s.t1.v18)}. A diferença entre os candidatos foi de ${fmt(margem)} votos.`;
-  const legenda = '<span><i class="sw t1"></i>1º turno (4/10)</span><span><i class="sw t2"></i>2º turno (25/10)</span>';
-  $('#hora-legend').innerHTML = legenda;
-  const series = [{ cls: 't1', nome: '1º turno' }, { cls: 't2', nome: '2º turno' }];
+    ? at('extNone', { area: esc(nomeArea()), t1: fmt(s.t1.v18) })
+    : at('extSome', {
+      area: esc(nomeArea()), n: fmt(s.t2.v18), votes: plural(s.t2.v18, 'vote1', 'voteN'), p: pct(s.t2.v18 / s.t2.votos, 3),
+      s: fmt(s.t2.s18), sections: plural(s.t2.s18, 'section1', 'sectionN'), t1: fmt(s.t1.v18), m: fmt(margem),
+    });
+  $('#hora-legend').innerHTML = legendaTurnos();
+  const series = [{ cls: 't1', nome: at('t1') }, { cls: 't2', nome: at('t2') }];
   const turnos = ['t1', 't2'] as const;
+  const nomeT = (i: number) => at(i ? 't2' : 't1');
   const tot = turnos.map((t) => Object.values(a.hora[t]).reduce((x, y) => x + y, 0) || 1);
   const horas = Array.from({ length: 13 }, (_, i) => i + 7).filter((h) => turnos.some((t) => (a.hora[t][h] ?? 0) > 0) || (h >= 8 && h <= 19));
-  vbars($('#hora-chart'), horas.map((h) => ({ key: h, label: `${h}h`, tick: true })), series,
+  vbars($('#hora-chart'), horas.map((h) => ({ key: h, label: at('hourAxis', { h }), tick: true })), series,
     (si, h) => (a.hora[turnos[si]][h] ?? 0) / tot[si],
-    (h) => `<b>${h}h às ${h}h59</b>` + turnos.map((t, i) => tipRow(t, i ? '2º turno' : '1º turno',
+    (h) => `<b>${at('hourTip', { h })}</b>` + turnos.map((t, i) => tipRow(t, nomeT(i),
       `${fmt(a.hora[t][h] ?? 0)} (${pct((a.hora[t][h] ?? 0) / tot[i])})`)).join(''),
     (v) => pct(v, 0));
 
   const bins = Array.from({ length: 24 }, (_, i) => 960 + i * 10);
-  vbars($('#tarde-chart'), bins.map((m) => ({ key: m, label: `${m / 60}h`, tick: m % 60 === 0 })), series,
+  vbars($('#tarde-chart'), bins.map((m) => ({ key: m, label: at('hourAxis', { h: m / 60 }), tick: m % 60 === 0 })), series,
     (si, m) => a.tarde[turnos[si]][m] ?? 0,
-    (m) => `<b>${hh(m)} às ${hh(m + 9)}</b>` + turnos.map((t, i) => tipRow(t, i ? '2º turno' : '1º turno', fmt(a.tarde[t][m] ?? 0))).join(''),
-    (v) => curto(v), { log: logScale, marks: [{ at: 1020, label: '17h' }, { at: 1080, label: '18h' }] });
+    (m) => `<b>${at('binTip', { a: hh(m), b: hh(m + 9) })}</b>` + turnos.map((t, i) => tipRow(t, nomeT(i), fmt(a.tarde[t][m] ?? 0))).join(''),
+    (v) => curto(v), { log: logScale, marks: [{ at: 1020, label: hh(1020) }, { at: 1080, label: hh(1080) }] });
 
-  const cortes = [['v17', 's17', '17h00'], ['v1730', 's1730', '17h30'], ['v18', 's18', '18h00'], ['v19', 's19', '19h00']] as const;
-  $('#ext-table').innerHTML = `<thead><tr><th>Votos a partir de</th><th>1º turno</th><th>% do turno</th><th>Seções</th><th>2º turno</th><th>% do turno</th><th>Seções</th></tr></thead><tbody>` +
-    cortes.map(([v, sc, l]) => `<tr><td>${l}</td><td>${fmt(s.t1[v])}</td><td>${pct(s.t1[v] / s.t1.votos, 3)}</td><td>${fmt(s.t1[sc])}</td>` +
+  const cortes = [['v17', 's17', 1020], ['v1730', 's1730', 1050], ['v18', 's18', 1080], ['v19', 's19', 1140]] as const;
+  const cab = `<th>${at('t1')}</th><th>${at('ofRound')}</th><th>${at('sections')}</th>`;
+  $('#ext-table').innerHTML = `<thead><tr><th>${at('votesFrom')}</th>${cab}${cab.replace(at('t1'), at('t2'))}</tr></thead><tbody>` +
+    cortes.map(([v, sc, m]) => `<tr><td>${hh(m)}</td><td>${fmt(s.t1[v])}</td><td>${pct(s.t1[v] / s.t1.votos, 3)}</td><td>${fmt(s.t1[sc])}</td>` +
       `<td><strong>${fmt(s.t2[v])}</strong></td><td>${pct(s.t2[v] / s.t2.votos, 3)}</td><td>${fmt(s.t2[sc])}</td></tr>`).join('') +
-    `<tr><td>Total registrado</td><td>${fmt(s.t1.votos)}</td><td></td><td>${fmt(s.t1.secoes)}</td><td>${fmt(s.t2.votos)}</td><td></td><td>${fmt(s.t2.secoes)}</td></tr></tbody>`;
+    `<tr><td>${at('totalRecorded')}</td><td>${fmt(s.t1.votos)}</td><td></td><td>${fmt(s.t1.secoes)}</td><td>${fmt(s.t2.votos)}</td><td></td><td>${fmt(s.t2.secoes)}</td></tr></tbody>`;
 }
 
-const ORIGENS: [string, string][] = [
-  ['Abstenção', 'Não votou no 1º'], ['Branco/Nulo', 'Branco/nulo no 1º'], ['Cury', 'Cury'], ['Renan', 'Renan'],
-  ['Caiado', 'Caiado'], ['Zema', 'Zema'], ['Outros', 'Outros candidatos'], ['rival', 'Eleitor do rival'],
+const ORIGENS: [string, AKey | null][] = [
+  ['Abstenção', 'oAbst'], ['Branco/Nulo', 'oBN'], ['Cury', null], ['Renan', null],
+  ['Caiado', null], ['Zema', null], ['Outros', 'oOthers'], ['rival', 'oRival'],
 ];
 
 function transferencia() {
   const brasil = uf === BR;
   const fl = D.fluxos[uf];
-  $('#tr-sub').textContent = brasil
-    ? 'Eleitores que cada candidato ganhou no 2º turno, por escolha no 1º turno (milhões). Estimativa.'
-    : fl ? `Estimativa para ${nomeArea()} (versão UF × tercil). Mais incerta que a nacional.` : '';
+  $('#tr-sub').textContent = brasil ? at('trSubBR') : fl ? at('trSubUF', { area: nomeArea() }) : '';
   $('#tr-legend').innerHTML = '<span><i class="sw lula"></i>Lula</span><span><i class="sw flavio"></i>Flávio</span>' +
-    (brasil ? '<span>trecho claro: faixa entre as três versões do modelo</span>' : '');
+    (brasil ? `<span>${at('trRange')}</span>` : '');
   const host = $('#tr-chart');
   if (!brasil && !fl) {
-    host.innerHTML = '<p class="note">Sem estimativa para esta abrangência.</p>';
+    host.innerHTML = `<p class="note">${at('trNone')}</p>`;
     $('#tr-summary').textContent = '';
     return;
   }
@@ -366,25 +394,96 @@ function transferencia() {
     if (o === 'rival') return fl[c === 'Lula' ? 'Flávio→Lula' : 'Lula→Flávio'] ?? 0;
     return fl[`${o}→${c}`] ?? 0;
   };
-  const fx = (v: number | [number, number]) => (Array.isArray(v) ? (v[0] === v[1] ? mi(v[0]) : `${mi(v[0])} a ${mi(v[1])}`) : fmt(v));
-  const rows: HRow[] = ORIGENS.map(([o, label]) => {
+  const fx = (v: number | [number, number]) =>
+    Array.isArray(v) ? (v[0] === v[1] ? mi(v[0]) : at('range', { a: mi(v[0]), b: mi(v[1]) })) : fmt(v);
+  const rows: HRow[] = ORIGENS.map(([o, chave]) => {
+    const label = chave ? at(chave) : o;
     const vals = brasil ? [faixa('Lula', o), faixa('Flávio', o)] : [ponto('Lula', o), ponto('Flávio', o)];
     return {
       key: o, label, vals,
-      tip: `<b>${label}</b>${tipRow('lula', 'para Lula', fx(vals[0]))}${tipRow('flavio', 'para Flávio', fx(vals[1]))}`,
+      tip: `<b>${label}</b>${tipRow('lula', at('toLula'), fx(vals[0]))}${tipRow('flavio', at('toFlavio'), fx(vals[1]))}`,
     };
   });
   hbars(host, rows, [{ cls: 'lula', nome: 'Lula' }, { cls: 'flavio', nome: 'Flávio' }],
-    brasil ? (v) => (v / 1e6).toLocaleString('pt-BR') : curto, { labelW: 132 });
+    brasil ? (v) => num(v / 1e6) : curto, { labelW: 140 });
   if (brasil) {
     const saldos = specs.map((s) => s.Lula['do rival'] - s.Flávio['do rival']);
     const [l1, l2] = faixa('Lula', 'rival');
     const [f1, f2] = faixa('Flávio', 'rival');
-    $('#tr-summary').innerHTML = `<strong>Troca direta:</strong> de ${mi(l1, 1)} a ${mi(l2, 1)} eleitores de Flávio no 1º turno votaram em Lula, e de ${mi(f1, 1)} a ${mi(f2, 1)} fizeram o caminho inverso. Saldo para Lula de <strong>${mi(Math.min(...saldos), 1)} a ${mi(Math.max(...saldos), 1)}</strong>. Sem modelo nenhum, só somando as quedas município a município: Lula perdeu votos em 89 municípios (mínimo de 16 mil eleitores), Flávio em 950 (mínimo de 134 mil).`;
+    $('#tr-summary').innerHTML = at('trSumBR', {
+      l1: mi(l1, 1), l2: mi(l2, 1), f1: mi(f1, 1), f2: mi(f2, 1),
+      s1: mi(Math.min(...saldos), 1), s2: mi(Math.max(...saldos), 1),
+    });
   } else {
     const s = fl.saldo_troca_Lula ?? 0;
-    $('#tr-summary').innerHTML = `<strong>Troca direta estimada:</strong> saldo de ${signed(s)} eleitores para ${s >= 0 ? 'Lula' : 'Flávio'} ${naArea()}.`;
+    $('#tr-summary').innerHTML = at('trSumUF', { n: signed(s), c: s >= 0 ? 'Lula' : 'Flávio', area: esc(naArea()) });
   }
+}
+
+// ---------- auditoria ----------
+let AUD: Auditoria | null = null;
+let flagTipo: 'zero' | 'comp' | 'zona' = 'zero';
+let flagLimite = 30;
+
+function auditoria() {
+  if (!AUD) return;
+  const A = AUD;
+  const l = A.logs;
+  const b = A.bu;
+  const s = A.assinaturas;
+  const m = A.municipios;
+  const sc = A.secoes;
+  const r = A.sinalizadas_resumo.zona;
+  const p3 = (x: number) => dec(x, 2);
+  const linhas: [string, AKey, string][] = [
+    ['ok', 'cSum', at('rSum', { l: fmt(A.oficial['13']), f: fmt(A.oficial['22']), n: fmt(b.sa) })],
+    ['ok', 'cRdv', at('rRdv', { a: fmt(b.rdv_igual), b: fmt(b.com_rdv) })],
+    ['ok', 'cSig', at('rSig', { a: fmt(s.conteudo_ok), b: fmt(s.secoes) })],
+    ['ok', 'cSoft', at('rSoft', { a: fmt(l.versao_oficial), b: fmt(l.com_log) })],
+    ['ok', 'cLog', at('rLog', { a: fmt(b.log_igual), b: fmt(b.log_menor), c: fmt(b.log_menor_contingencia) })],
+    ['ok', 'cWin', at('rWin')],
+    ['ok', 'cRhy', at('rRhy', { g: fmt(l.gap_min_s) })],
+    ['ok', 'cDup', at('rDup', { n: fmt(l.ja_votou) })],
+    ['ok', 'cDig', at('rDig', { a: p3(sc.ultimo_digito.lula.p), b: p3(sc.ultimo_digito.flavio.p) })],
+    ['ok', 'cKli', at('rKli', { k: fmt(sc.klimek), n: fmt(sc.n), c: fmt(sc.comparecimento_100) })],
+    ['info', 'cZero', at('rZero', { f: fmt(sc.zeros.flavio), l: fmt(sc.zeros.lula) })],
+    ['info', 'cOut', at('rOut', { n: fmt(sc.fora_da_zona), m: `${dec(r.mediana_dif_pp, 1)} ${at('unitPP')}`, x: `${dec(r.max_dif_pp, 1)} ${at('unitPP')}` })],
+    ['info', 'cDrop', at('rDrop', { n: fmt(m.quedas_comparecimento) })],
+  ];
+  $('#aud-headline').innerHTML = at('audHead');
+  $('#aud-table').innerHTML = `<tbody>${linhas.map(([st, k, v]) =>
+    `<tr><td class="st ${st}" aria-hidden="true">${st === 'ok' ? '✓' : '!'}</td><td>${at(k)}</td><td>${v}</td></tr>`).join('')}</tbody>`;
+  sinalizadas();
+}
+
+function sinalizadas() {
+  if (!AUD) return;
+  const rows = AUD.sinalizadas
+    .filter((x) => x[0] === flagTipo && (uf === BR || x[1] === uf))
+    .sort((a, b) => b[6] + b[7] - (a[6] + a[7]));
+  $('#flag-sub').textContent = at('flagSub', {
+    n: fmt(rows.length), sections: plural(rows.length, 'section1', 'sectionN'), area: uf === BR ? '' : ' ' + naArea(),
+  });
+  const par = (lu: number, fl: number) =>
+    `${fmt(lu)} × ${fmt(fl)}<span class="sub2">${lu + fl ? pct(lu / (lu + fl), 0) + ' Lula' : '–'}</span>`;
+  const t = $('#flag-table');
+  if (!rows.length) {
+    t.innerHTML = `<tbody><tr><td class="note">${at('flagNone')}</td></tr></tbody>`;
+  } else {
+    t.innerHTML = `<thead><tr><th scope="col">${at('colMun')}</th><th scope="col">${at('colSec')}</th><th scope="col">${at('colT2')}</th>` +
+      `<th scope="col">${at('colT1')}</th><th scope="col">${at('colComp')}</th></tr></thead><tbody>` +
+      rows.slice(0, flagLimite).map((x) => {
+        const [, u, nome, z, sec, aptos, l2, f2, bn2, l1, f1, , c1, a1] = x;
+        const c2 = aptos ? (l2 + f2 + bn2) / aptos : NaN;
+        const cc1 = c1 != null && a1 ? c1 / a1 : NaN;
+        return `<tr><td>${esc(nomeMun(nome.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (c) => c.toUpperCase())))} <span class="note">${ufCurto(u)}</span></td>` +
+          `<td>${z} / ${sec}</td><td>${par(l2, f2)}</td><td>${l1 == null ? '–' : par(l1, f1 ?? 0)}</td>` +
+          `<td>${isNaN(c2) ? '–' : pct(c2, 0)}<span class="sub2">${at('t1Short')}: ${isNaN(cc1) ? '–' : pct(cc1, 0)}</span></td></tr>`;
+      }).join('') + '</tbody>';
+  }
+  const more = $('#flag-more') as HTMLButtonElement;
+  more.hidden = rows.length <= flagLimite;
+  more.textContent = at('more', { a: fmt(Math.min(100, rows.length - flagLimite)), b: fmt(rows.length - flagLimite) });
 }
 
 // ---------- municípios ----------
@@ -396,20 +495,20 @@ const MINUSC = new Set(['de', 'da', 'do', 'dos', 'das', 'e', "d'"]);
 const nomeMun = (s: string) => s.split(' ').map((w, i) => (i && MINUSC.has(w.toLowerCase()) ? w.toLowerCase() : w)).join(' ');
 const norm = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
-const COLS: { th: string; v: (m: Mun) => number | string; td: (m: Mun) => string }[] = [
-  { th: 'Município', v: (m) => m.busca, td: (m) => `${esc(m.nome)}${uf === BR ? ` <span class="note">${m.uf === 'Exterior' ? 'Ext.' : m.uf}</span>` : ''}` },
-  { th: 'Eleitorado', v: (m) => m.Eleit, td: (m) => fmt(m.Eleit) },
-  { th: 'Lula 2º', v: (m) => m.L2, td: (m) => fmt(m.L2) },
-  { th: 'Δ Lula', v: (m) => varPct(m.L1, m.L2) || 0, td: (m) => `<span class="${cls(m.L2 - m.L1)}">${m.L1 ? spct(varPct(m.L1, m.L2)) : '–'}</span>` },
-  { th: 'Flávio 2º', v: (m) => m.F2, td: (m) => fmt(m.F2) },
-  { th: 'Δ Flávio', v: (m) => varPct(m.F1, m.F2) || 0, td: (m) => `<span class="${cls(m.F2 - m.F1)}">${m.F1 ? spct(varPct(m.F1, m.F2)) : '–'}</span>` },
-  { th: 'Lula % válidos', v: (m) => m.L2 / (m.L2 + m.F2 || 1), td: (m) => `${pct(m.L1 / (m.L1 + m.F1 + m.O1 || 1))} → ${pct(m.L2 / (m.L2 + m.F2 || 1))}` },
-  { th: 'Comparec. 2º', v: (m) => (m.Eleit - m.A2) / (m.Eleit || 1), td: (m) => {
+const COLS: { th: () => string; v: (m: Mun) => number | string; td: (m: Mun) => string }[] = [
+  { th: () => at('colMun'), v: (m) => m.busca, td: (m) => `${esc(m.nome)}${uf === BR ? ` <span class="note">${ufCurto(m.uf)}</span>` : ''}` },
+  { th: () => at('colElect'), v: (m) => m.Eleit, td: (m) => fmt(m.Eleit) },
+  { th: () => at('colLula2'), v: (m) => m.L2, td: (m) => fmt(m.L2) },
+  { th: () => 'Δ Lula', v: (m) => varPct(m.L1, m.L2) || 0, td: (m) => `<span class="${cls(m.L2 - m.L1)}">${m.L1 ? spct(varPct(m.L1, m.L2)) : '–'}</span>` },
+  { th: () => at('colFlavio2'), v: (m) => m.F2, td: (m) => fmt(m.F2) },
+  { th: () => 'Δ Flávio', v: (m) => varPct(m.F1, m.F2) || 0, td: (m) => `<span class="${cls(m.F2 - m.F1)}">${m.F1 ? spct(varPct(m.F1, m.F2)) : '–'}</span>` },
+  { th: () => at('colValid'), v: (m) => m.L2 / (m.L2 + m.F2 || 1), td: (m) => `${pct(m.L1 / (m.L1 + m.F1 + m.O1 || 1))} → ${pct(m.L2 / (m.L2 + m.F2 || 1))}` },
+  { th: () => at('colTurnout'), v: (m) => (m.Eleit - m.A2) / (m.Eleit || 1), td: (m) => {
     const c1 = (m.Eleit - m.A1) / (m.Eleit || 1);
     const c2 = (m.Eleit - m.A2) / (m.Eleit || 1);
     return `${pct(c2)} <span class="${cls(c2 - c1)}">(${pp(c2 - c1)})</span>`;
   } },
-  { th: 'Votos após 17h (2º)', v: (m) => m.ap2, td: (m) => fmt(m.ap2) },
+  { th: () => at('colAfter17'), v: (m) => m.ap2, td: (m) => fmt(m.ap2) },
 ];
 
 function municipios() {
@@ -422,13 +521,23 @@ function municipios() {
     const r = typeof x === 'string' ? x.localeCompare(y as string, 'pt-BR') : (x as number) - (y as number);
     return munSort.asc ? r : -r;
   });
-  $('#mun-sub').textContent = `${fmt(rows.length)} município${rows.length === 1 ? '' : 's'}${uf === BR ? '' : ' ' + naArea()}. Clique no título de uma coluna para ordenar.`;
+  $('#mun-sub').textContent = at('munSub', {
+    n: fmt(rows.length), muns: plural(rows.length, 'mun1', 'munN'), area: uf === BR ? '' : ' ' + naArea(),
+  });
   const t = $('#mun-table');
-  t.innerHTML = `<thead><tr>${COLS.map((c, i) => `<th scope="col" data-i="${i}"${i === munSort.col ? ` aria-sort="${munSort.asc ? 'ascending' : 'descending'}"` : ''}>${c.th}</th>`).join('')}</tr></thead>` +
+  t.innerHTML = `<thead><tr>${COLS.map((c, i) => `<th scope="col" data-i="${i}"${i === munSort.col ? ` aria-sort="${munSort.asc ? 'ascending' : 'descending'}"` : ''}>${c.th()}</th>`).join('')}</tr></thead>` +
     `<tbody>${rows.slice(0, munLimite).map((m) => `<tr>${COLS.map((c) => `<td>${c.td(m)}</td>`).join('')}</tr>`).join('')}</tbody>`;
   const more = $('#mun-more') as HTMLButtonElement;
   more.hidden = rows.length <= munLimite;
-  more.textContent = `Mostrar mais (${fmt(Math.min(100, rows.length - munLimite))} de ${fmt(rows.length - munLimite)} restantes)`;
+  more.textContent = at('more', { a: fmt(Math.min(100, rows.length - munLimite)), b: fmt(rows.length - munLimite) });
+}
+
+function opcoesUf() {
+  const sel = $('#uf') as HTMLSelectElement;
+  sel.innerHTML = `<option value="${BR}">${esc(at('brazil'))}</option>` +
+    Object.keys(D.uf).sort((a, b) => ufNome(a).localeCompare(ufNome(b), loc()))
+      .map((k) => `<option value="${k}">${esc(ufNome(k))}</option>`).join('');
+  sel.value = uf;
 }
 
 function render() {
@@ -437,21 +546,66 @@ function render() {
   horario();
   transferencia();
   municipios();
+  auditoria();
 }
+
+// ---------- idioma ----------
+const store = {
+  get: (k: string) => {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      // sem storage: vale só para esta visita
+    }
+  },
+};
+
+function aplicarIdioma(l: Lang) {
+  setALang(l);
+  document.documentElement.lang = LOC[l];
+  applyAStatic();
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#lang button')) b.setAttribute('aria-pressed', String(b.dataset.lang === l));
+}
+
+aplicarIdioma(detectLang(new URLSearchParams(location.search).get('lang'), store.get('lang'), navigator.languages ?? [navigator.language]));
+$('#lang').addEventListener('click', (e) => {
+  const l = (e.target as HTMLElement).closest('button')?.dataset.lang as Lang | undefined;
+  if (!l || !LANGS.includes(l) || l === aLang()) return;
+  store.set('lang', l);
+  const q = new URLSearchParams(location.search);
+  if (q.has('lang')) {
+    q.delete('lang');
+    history.replaceState(null, '', `${location.pathname}${q.size ? '?' + q : ''}${location.hash}`);
+  }
+  aplicarIdioma(l);
+  if (D) {
+    opcoesUf();
+    render();
+  }
+});
 
 async function main() {
   const res = await fetch('./dados.json');
   D = await res.json();
+  // a auditoria é opcional: se não carregar, o resto da página funciona
+  fetch('./auditoria.json').then((r) => (r.ok ? r.json() : null)).then((a: Auditoria | null) => {
+    AUD = a;
+    auditoria();
+  }).catch(() => undefined);
   MUNS = D.mun.map((r) => {
     const [u, nome, L1, L2, F1, F2, O1, BN1, BN2, A1, A2, Eleit, ap1, ap2, log2] = r as [string, string, ...number[]];
     return { uf: u, nome: nomeMun(nome), L1, L2, F1, F2, O1, BN1, BN2, A1, A2, Eleit, ap1, ap2, log2, busca: norm(nome) };
   });
-  const sel = $('#uf') as HTMLSelectElement;
-  sel.innerHTML = `<option value="${BR}">Brasil</option>` +
-    Object.keys(D.uf).sort((a, b) => (UF_NOMES[a] ?? a).localeCompare(UF_NOMES[b] ?? b, 'pt-BR'))
-      .map((k) => `<option value="${k}">${esc(UF_NOMES[k] ?? k)}</option>`).join('');
   if (uf !== BR && !D.uf[uf]) uf = BR;
-  sel.value = uf;
+  opcoesUf();
+  const sel = $('#uf') as HTMLSelectElement;
   sel.addEventListener('change', () => setUf(sel.value));
   $('#var-metric').addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
@@ -475,6 +629,18 @@ async function main() {
     munSort = munSort.col === i ? { col: i, asc: !munSort.asc } : { col: i, asc: i === 0 };
     municipios();
   });
+  $('#flag-type').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('button');
+    if (!b) return;
+    flagTipo = b.dataset.v as typeof flagTipo;
+    flagLimite = 30;
+    for (const x of $('#flag-type').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+    sinalizadas();
+  });
+  $('#flag-more').addEventListener('click', () => {
+    flagLimite += 100;
+    sinalizadas();
+  });
   $('#mun-more').addEventListener('click', () => {
     munLimite += 100;
     municipios();
@@ -497,5 +663,5 @@ async function main() {
 }
 
 main().catch((e) => {
-  $('#app').innerHTML = `<p class="loading">Não foi possível carregar os dados (${esc(String(e))}).</p>`;
+  $('#app').innerHTML = `<p class="loading">${esc(at('loadError', { e: String(e) }))}</p>`;
 });
