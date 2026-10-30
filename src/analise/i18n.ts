@@ -136,6 +136,14 @@ const pt = {
   colT1: '1º turno',
   colComp: 'Comparecimento',
   flagNone: 'Nenhuma seção deste tipo nesta abrangência.',
+  cBio: 'Votos sem biometria',
+  rBio: '{p} dos votos ({n}) sem digital reconhecida: {f} com digital que falhou e liberação manual, {s} sem digital pedida. A parcela fica entre {min} e {max} em todas as horas de 8h a 17h. Depois das 17h votaram {a} eleitores (fila do encerramento), {b} deles sem biometria.',
+  bioTitle: 'Votos sem biometria, por hora',
+  bioSub: 'Cada voto lido no log da urna, com o horário de Brasília pelo fuso do município.',
+  colHour: 'Hora (Brasília)',
+  colVotesH: 'Votos',
+  colNoBio: 'Sem biometria',
+  bioNote: 'O log não diz em quem cada eleitor votou: o voto é secreto e o registro dos votos é embaralhado. Comparando seções do mesmo município, 10 p.p. a mais de eleitores sem biometria vêm com Lula {s} maior, em média; isso pode refletir só o perfil da seção (idade, ocupação).',
   audNote: 'Scripts e dados: <a href="./auditoria.json" download>auditoria.json</a>. Não verificável com os arquivos públicos: os certificados das autoridades certificadoras das urnas (não vêm nos arquivos), a assinatura de hardware (formato próprio) e o código de cada linha do log; o log inteiro é assinado pela urna. Estes testes procuram sinais conhecidos de manipulação; não provam ausência de fraude.',
 };
 
@@ -276,6 +284,14 @@ const en: Dict = {
   colT1: 'First round',
   colComp: 'Turnout',
   flagNone: 'No polling station of this type in this area.',
+  cBio: 'Votes without biometrics',
+  rBio: '{p} of votes ({n}) without a recognized fingerprint: {f} where the fingerprint failed and the voter was cleared manually, {s} where no fingerprint was requested. The share stays between {min} and {max} in every hour from 8 am to 5 pm. After 5 pm, {a} voters cast a ballot (the queue at closing time), {b} of them without biometrics.',
+  bioTitle: 'Votes without biometrics, by hour',
+  bioSub: 'Every vote read from the machine log, in Brasília time using the municipality’s time zone.',
+  colHour: 'Hour (Brasília)',
+  colVotesH: 'Votes',
+  colNoBio: 'No biometrics',
+  bioNote: 'The log does not say whom each voter chose: the ballot is secret and the vote record is shuffled. Comparing polling stations in the same municipality, 10 pp more voters without biometrics go with Lula {s} higher on average; this may only reflect the station’s profile (age, occupation).',
   audNote: 'Data: <a href="./auditoria.json" download>auditoria.json</a>. Not verifiable from the public files: the certificates of the machines’ certificate authorities (not included in the files), the hardware signature (proprietary format) and the code on each log line; the whole log is signed by the machine. These tests look for known signs of tampering; they do not prove the absence of fraud.',
 };
 
@@ -414,6 +430,14 @@ const es: Dict = {
   colT1: '1.ª vuelta',
   colComp: 'Participación',
   flagNone: 'Ninguna sección de este tipo en este ámbito.',
+  cBio: 'Votos sin biometría',
+  rBio: '{p} de los votos ({n}) sin huella reconocida: {f} con huella fallida y habilitación manual, {s} sin huella solicitada. La proporción queda entre {min} y {max} en todas las horas de 8 a 17 h. Después de las 17 h votaron {a} electores (la fila del cierre), {b} de ellos sin biometría.',
+  bioTitle: 'Votos sin biometría, por hora',
+  bioSub: 'Cada voto leído en el registro de la urna, con la hora de Brasilia según el huso del municipio.',
+  colHour: 'Hora (Brasilia)',
+  colVotesH: 'Votos',
+  colNoBio: 'Sin biometría',
+  bioNote: 'El registro no indica por quién votó cada elector: el voto es secreto y el registro de votos está mezclado. Comparando secciones del mismo municipio, 10 p. p. más de electores sin biometría van con Lula {s} más alto, en promedio; esto puede reflejar solo el perfil de la sección (edad, ocupación).',
   audNote: 'Datos: <a href="./auditoria.json" download>auditoria.json</a>. No verificable con los archivos públicos: los certificados de las autoridades certificadoras de las urnas (no vienen en los archivos), la firma de hardware (formato propio) y el código de cada línea del registro; el registro completo está firmado por la urna. Estas pruebas buscan señales conocidas de manipulación; no prueban la ausencia de fraude.',
 };
 

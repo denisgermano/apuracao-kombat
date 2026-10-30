@@ -33,6 +33,10 @@ type Auditoria = {
   secoes: { n: number; zeros: { lula: number; flavio: number }; fora_da_zona: number; comparecimento_100: number; klimek: number; ultimo_digito: { lula: Digito; flavio: Digito } };
   sinalizadas: [string, string, string, number, number, number, number, number, number, number | null, number | null, number | null, number | null, number | null][];
   sinalizadas_resumo: Record<'zero' | 'zona' | 'comp', { mediana_dif_pp: number; max_dif_pp: number }>;
+  biometria?: {
+    votos: number; bio: number; falha: number; sem: number; apos_17h: number; apos_17h_sem_bio: number;
+    hora: Record<string, [number, number]>; inclinacao_municipio: number;
+  };
 };
 
 const UF_PT: Record<string, string> = {
@@ -450,9 +454,26 @@ function auditoria() {
     ['info', 'cOut', at('rOut', { n: fmt(sc.fora_da_zona), m: `${dec(r.mediana_dif_pp, 1)} ${at('unitPP')}`, x: `${dec(r.max_dif_pp, 1)} ${at('unitPP')}` })],
     ['info', 'cDrop', at('rDrop', { n: fmt(m.quedas_comparecimento) })],
   ];
+  const bi = A.biometria;
+  if (bi) {
+    const dia = Object.entries(bi.hora).filter(([h]) => +h < 17).map(([, [v, n]]) => n / v);
+    linhas.push(['info', 'cBio', at('rBio', {
+      p: pct((bi.falha + bi.sem) / bi.votos), n: fmt(bi.falha + bi.sem), f: fmt(bi.falha), s: fmt(bi.sem),
+      min: pct(Math.min(...dia)), max: pct(Math.max(...dia)), a: fmt(bi.apos_17h), b: fmt(bi.apos_17h_sem_bio),
+    })]);
+  }
   $('#aud-headline').innerHTML = at('audHead');
   $('#aud-table').innerHTML = `<tbody>${linhas.map(([st, k, v]) =>
     `<tr><td class="st ${st}" aria-hidden="true">${st === 'ok' ? '✓' : '!'}</td><td>${at(k)}</td><td>${v}</td></tr>`).join('')}</tbody>`;
+  if (bi) {
+    $('#bio').hidden = false;
+    $('#bio-table').innerHTML = `<thead><tr><th scope="col">${at('colHour')}</th><th scope="col">${at('colVotesH')}</th>` +
+      `<th scope="col">${at('colNoBio')}</th></tr></thead><tbody>` +
+      Object.entries(bi.hora).map(([h, [v, n]]) =>
+        `<tr><td>${+h >= 18 ? '18:00+' : `${h}:00–${+h + 1}:00`}</td><td>${fmt(v)}</td><td>${pct(n / v)}<span class="sub2">${fmt(n)}</span></td></tr>`).join('') +
+      '</tbody>';
+    $('#bio-note').textContent = at('bioNote', { s: `${dec(bi.inclinacao_municipio * 10, 1)} ${at('unitPP')}` });
+  }
   sinalizadas();
 }
 
